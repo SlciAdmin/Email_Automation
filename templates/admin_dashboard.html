@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ══════════════════════════════════════════════════
+     TOP HEADER
+══════════════════════════════════════════════════ -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+  <div>
+    <h1 style="font-size:1.7rem;font-weight:700;color:var(--text)">📋 Email Dashboard</h1>
+    <p style="color:var(--muted);margin-top:.3rem;font-size:.9rem">SLCI · Real-time Gmail Monitor</p>
+  </div>
+  <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.3);color:#86efac;padding:.4rem 1rem;border-radius:20px;font-size:.82rem">
+      <span class="live-dot"></span>Live
+    </span>
+    <button onclick="checkGmailNow()" class="btn btn-sm">📥 Fetch Now</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     STATS GRID
+══════════════════════════════════════════════════ -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number">{{ stats.total_emails }}</div>
+    <div class="stat-label">Total Emails</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--muted)">{{ stats.unassigned }}</div>
+    <div class="stat-label">Unrouted</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--yellow)">{{ stats.pending }}</div>
+    <div class="stat-label">Pending Reply</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--green)">{{ stats.resolved }}</div>
+    <div class="stat-label">Replied</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DEPARTMENT ROUTING
+══════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-header">📊 Department Routing</div>
+  <div style="display:flex;gap:2rem;flex-wrap:wrap">
+    {% set dept_counts = {} %}
+    {% for email in assigned_emails %}
+      {% if email.assigned_role %}
+        {% set _ = dept_counts.update({email.assigned_role: (dept_counts.get(email.assigned_role, 0) + 1)}) %}
+      {% endif %}
+    {% endfor %}
+    {% for dept in ['Client Relations','Audit','Legal','Accounts'] %}
+      {% set cnt = dept_counts.get(dept, 0) %}
+      {% if cnt > 0 %}
+      <div style="text-align:center;min-width:120px">
+        <div class="badge badge-{{ dept|lower|replace(' ','-') }}" style="font-size:.85rem;padding:.4rem .9rem">{{ dept }}</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--accent);margin:.5rem 0;font-family:'DM Mono',monospace">{{ cnt }}</div>
+        <div style="color:var(--muted);font-size:.78rem">emails</div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     🆕 CATEGORY ANALYTICS SECTION
+══════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:1.5rem;border-left:3px solid var(--purple)">
+  <div class="card-header" style="flex-wrap:wrap;gap:.8rem">
+    <span style="color:var(--purple)">🗂️ Category Analytics</span>
+    <!-- Date Filter Controls -->
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+      <select id="catFilterType" onchange="updateCategoryFilter()" style="padding:.35rem .7rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;cursor:pointer">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="week">This Week</option>
+        <option value="month" selected>This Month</option>
+        <option value="custom">Custom Range</option>
+      </select>
+      <div id="catCustomRange" style="display:none;gap:.4rem;align-items:center;display:none">
+        <input type="date" id="catFromDate" style="padding:.3rem .6rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.78rem">
+        <span style="color:var(--muted);font-size:.78rem">→</span>
+        <input type="date" id="catToDate" style="padding:.3rem .6rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.78rem">
+        <button onclick="loadCategoryStats()" class="btn btn-sm" style="padding:.3rem .7rem;font-size:.75rem">Apply</button>
+      </div>
+      <div style="display:flex;gap:.4rem">
+        <button onclick="setCatDays(1)" class="btn btn-ghost btn-sm" style="padding:.3rem .6rem;font-size:.75rem">Daily</button>
+        <button onclick="setCatDays(30)" class="btn btn-ghost btn-sm" style="padding:.3rem .6rem;font-size:.75rem">Monthly</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary bar -->
+  <div id="catSummary" style="display:flex;gap:1.5rem;margin-bottom:1.2rem;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="color:var(--muted);font-size:.82rem">Total:</span>
+      <span id="catTotal" style="font-weight:700;color:var(--text);font-family:'DM Mono',monospace">—</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="color:var(--muted);font-size:.82rem">Replied:</span>
+      <span id="catReplied" style="font-weight:700;color:var(--green);font-family:'DM Mono',monospace">—</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="color:var(--muted);font-size:.82rem">Pending:</span>
+      <span id="catPending" style="font-weight:700;color:var(--yellow);font-family:'DM Mono',monospace">—</span>
+    </div>
+  </div>
+
+  <!-- Category grid -->
+  <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem">
+    <div style="text-align:center;padding:2rem;color:var(--muted);grid-column:1/-1">
+      <div style="font-size:1.5rem">⏳</div>Loading categories…
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     🆕 CATEGORY DETAIL MODAL
+══════════════════════════════════════════════════ -->
+<div id="catModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:780px;max-height:90vh;overflow-y:auto">
+    <div style="padding:1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1">
+      <div>
+        <h2 id="catModalTitle" style="font-size:1.2rem;font-weight:700"></h2>
+        <p id="catModalSub" style="color:var(--muted);font-size:.85rem;margin-top:.2rem"></p>
+      </div>
+      <button onclick="closeCatModal()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <!-- Stats inside modal -->
+    <div style="padding:1.2rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;border-bottom:1px solid var(--border)">
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:1rem">
+        <div id="mdTotal" style="font-size:1.8rem;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace">—</div>
+        <div style="color:var(--muted);font-size:.78rem;margin-top:.2rem">Total</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:1rem">
+        <div id="mdReplied" style="font-size:1.8rem;font-weight:700;color:var(--green);font-family:'DM Mono',monospace">—</div>
+        <div style="color:var(--muted);font-size:.78rem;margin-top:.2rem">Replied</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:1rem">
+        <div id="mdPending" style="font-size:1.8rem;font-weight:700;color:var(--yellow);font-family:'DM Mono',monospace">—</div>
+        <div style="color:var(--muted);font-size:.78rem;margin-top:.2rem">Pending</div>
+      </div>
+    </div>
+    <!-- Email list inside modal -->
+    <div style="padding:1.2rem">
+      <h4 style="color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.8rem">Emails in this category</h4>
+      <div id="catModalEmails" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     NEW EMAIL ALERT
+══════════════════════════════════════════════════ -->
+<div id="newEmailAlert" style="display:none;background:rgba(46,163,242,.15);border:1px solid var(--accent);border-radius:8px;padding:.8rem 1.2rem;margin-bottom:1rem;animation:slideIn .3s ease">
+  <span style="font-weight:600;color:var(--accent)">🔔 New Email Received!</span>
+  <span id="newEmailDetails" style="margin-left:1rem;color:var(--muted);font-size:.9rem"></span>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     EMAIL TABLE
+══════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="card-header">
+    <span>📧 All Incoming Emails (<span id="emailCount">{{ assigned_emails|length }}</span>)</span>
+    <input type="text" id="tableSearch" placeholder="🔍 Search…" style="padding:.45rem .9rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.85rem;width:220px">
+  </div>
+  <div style="overflow-x:auto">
+    <table id="emailsTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>From</th>
+          <th>Subject</th>
+          <th>Category</th>
+          <th>Routed To</th>
+          <th>Status</th>
+          <th style="max-width:300px">Preview</th>
+          <th>Replies</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="emailTableBody">
+        {% for email in assigned_emails %}
+        <tr class="email-row" data-dept="{{ email.assigned_role or 'unassigned' }}" data-status="{{ 'resolved' if email.replied else 'pending' }}" data-id="{{ email.id }}">
+          <td style="color:var(--muted);font-size:.82rem">{{ email.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">{{ email.get_sender_display() }}</td>
+          <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ email.subject }}">{{ email.subject[:50] }}{% if email.subject|length > 50 %}…{% endif %}</td>
+          <td>
+            <span class="cat-badge" onclick="openCatModal('{{ email.category }}')" style="font-size:.78rem;color:var(--accent);cursor:pointer;text-decoration:underline;text-decoration-style:dotted" title="View category details">{{ email.category }}</span>
+          </td>
+          <td>
+            {% if email.assigned_role %}
+              <span class="badge badge-{{ email.assigned_role|lower|replace(' ','-') }}">{{ email.assigned_role }}</span>
+            {% else %}
+              <span class="badge badge-new">Unrouted</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if email.replied %}
+              <span style="color:var(--green);font-size:.82rem">✓ Replied</span>
+            {% else %}
+              <span style="color:var(--yellow);font-size:.82rem">⏳ Pending</span>
+            {% endif %}
+          </td>
+          <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem;color:var(--muted)" title="{{ email.body }}">
+            {{ email.get_body_preview(80) }}
+          </td>
+          <td style="font-family:'DM Mono',monospace;font-size:.82rem">
+            {% set rc = email.replies.count() if email.replies else 0 %}
+            <span style="background:var(--surface2);padding:.15rem .5rem;border-radius:10px">{{ rc }}</span>
+          </td>
+          <td><a href="{{ url_for('view_email', email_id=email.id) }}" style="color:var(--accent);font-size:.85rem">View →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     REAL-TIME REPLY FEED
+══════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:1.5rem;border-left:3px solid var(--green)">
+  <div class="card-header">
+    <div style="display:flex;align-items:center;gap:1rem">
+      ⚡ Recent Replies
+      <span class="badge badge-success">LIVE</span>
+    </div>
+    <span id="reply-counter" style="color:var(--muted);font-size:.82rem">Tracking…</span>
+  </div>
+  <div id="reply-feed" style="max-height:280px;overflow-y:auto">
+    {% if recent_replies %}
+      {% for rep in recent_replies %}
+      <div class="reply-item">
+        <div style="display:flex;gap:.8rem;align-items:start">
+          <div style="width:32px;height:32px;background:rgba(63,185,80,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">✉️</div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+              <span style="font-weight:600;color:var(--green)">{{ rep.subject[:40] }}{% if rep.subject|length>40 %}…{% endif %}</span>
+              <span style="color:var(--muted);font-size:.78rem">{{ rep.replied_at or rep.timestamp }}</span>
+            </div>
+            <div style="color:var(--muted);font-size:.8rem">{{ rep.department }} · {{ rep.user_email or 'Unknown' }}</div>
+            <div style="background:var(--surface2);padding:.5rem .8rem;border-radius:6px;margin-top:.4rem;font-size:.85rem">
+              {{ (rep.reply_preview or '')[:120] }}{% if (rep.reply_preview or '')|length > 120 %}…{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center;padding:3rem;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:.5rem">⏳</div>
+        Waiting for replies…
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script id="js-init-data" type="application/json">
+{"initialReplyCount": {{ (recent_replies|default([])|length)|tojson }}}
+</script>
+
+<style>
+.cat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.cat-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(46,163,242,.15);
+}
+.cat-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 3px 0 0 3px;
+}
+
+/* Category Badge Colors for New Priority Categories */
+.badge-reminder { background: rgba(59, 130, 246, .15); color: #3b82f6; border: 1px solid rgba(59,130,246,.3); }
+.badge-important { background: rgba(139, 92, 246, .15); color: #8b5cf6; border: 1px solid rgba(139,92,246,.3); }
+.badge-urgent { background: rgba(239, 68, 68, .15); color: #ef4444; border: 1px solid rgba(239,68,68,.3); font-weight: 600; }
+.badge-delay { background: rgba(245, 158, 11, .15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+.badge-complaint { background: rgba(220, 38, 38, .15); color: #dc2626; border: 1px solid rgba(220,38,38,.3); }
+.badge-no-response { background: rgba(100, 116, 139, .15); color: #64748b; border: 1px solid rgba(100,116,139,.3); }
+.cat-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin-top: .6rem;
+  overflow: hidden;
+}
+.cat-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--green);
+  transition: width .6s ease;
+}
+.cat-modal-email-row {
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .8rem;
+  transition: background .15s;
+}
+.cat-modal-email-row:hover { background: rgba(46,163,242,.04); border-radius: 6px; padding: .7rem .5rem; }
+</style>
+
+<script>
+// ════════════════════════════════════════════
+// SSE – Real-time
+// ════════════════════════════════════════════
+const config = JSON.parse(document.getElementById('js-init-data').textContent);
+let replyCount = config.initialReplyCount || 0;
+let emailEs = null, replyEs = null;
+
+function initEmailSSE(){
+  if(!window.EventSource) return;
+  if(emailEs){ emailEs.close(); emailEs = null; }
+  emailEs = new EventSource('/email_stream');
+  emailEs.onmessage = function(e){
+    if(!e.data || e.data === '{}') return;
+    try{
+      const data = JSON.parse(e.data);
+      if(data.type === 'heartbeat') return;
+      if(data.type === 'new_email'){
+        addNewEmailToTable(data);
+        showNewEmailAlert(data);
+        updateEmailCount(1);
+        loadCategoryStats(); // refresh category analytics
+      }
+    }catch(err){ console.warn('Email SSE parse error:', err); }
+  };
+  emailEs.onerror = function(){ if(emailEs) emailEs.close(); setTimeout(initEmailSSE, 3000); };
+}
+
+function initReplySSE(){
+  if(!window.EventSource) return;
+  if(replyEs){ replyEs.close(); replyEs = null; }
+  replyEs = new EventSource('/reply_stream');
+  replyEs.onmessage = function(e){
+    if(!e.data || e.data === '{}') return;
+    try{
+      const r = JSON.parse(e.data);
+      if(r.type === 'reply'){
+        addReply(r);
+        replyCount++;
+        const counter = document.getElementById('reply-counter');
+        if(counter) counter.textContent = '📨 ' + replyCount + ' replies today';
+        updateEmailRowStatus(r.email_id, 'resolved');
+        loadCategoryStats(); // refresh on new reply too
+      }
+    }catch(err){ console.warn('Reply SSE parse error:', err); }
+  };
+  replyEs.onerror = function(){ if(replyEs) replyEs.close(); setTimeout(initReplySSE, 3000); };
+}
+
+// ════════════════════════════════════════════
+// Category Analytics
+// ════════════════════════════════════════════
+let currentCatFilter = { type: 'month', from: '', to: '' };
+
+function updateCategoryFilter(){
+  const type = document.getElementById('catFilterType').value;
+  const customDiv = document.getElementById('catCustomRange');
+  currentCatFilter.type = type;
+  if(type === 'custom'){
+    customDiv.style.display = 'flex';
+  } else {
+    customDiv.style.display = 'none';
+    loadCategoryStats();
+  }
+}
+
+function setCatDays(n){
+  const now = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - n);
+  document.getElementById('catFromDate').value = fmtDate(start);
+  document.getElementById('catToDate').value = fmtDate(now);
+  document.getElementById('catFilterType').value = 'custom';
+  document.getElementById('catCustomRange').style.display = 'flex';
+  currentCatFilter = { type: 'custom', from: fmtDate(start), to: fmtDate(now) };
+  loadCategoryStats();
+}
+
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+
+function loadCategoryStats(){
+  const type = document.getElementById('catFilterType').value;
+  let params = `filter=${type}`;
+  if(type === 'custom'){
+    const from = document.getElementById('catFromDate').value;
+    const to = document.getElementById('catToDate').value;
+    if(!from || !to){ alert('Please select both dates'); return; }
+    params += `&from=${from}&to=${to}`;
+    currentCatFilter = { type, from, to };
+  } else {
+    currentCatFilter = { type, from: '', to: '' };
+  }
+
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);grid-column:1/-1"><div style="font-size:1.5rem">⏳</div>Loading…</div>';
+
+  fetch('/api/category_stats?' + params)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('catTotal').textContent   = data.total   || 0;
+      document.getElementById('catReplied').textContent = data.replied || 0;
+      document.getElementById('catPending').textContent = data.pending || 0;
+      renderCategoryGrid(data.categories || []);
+    })
+    .catch(err => {
+      console.error('Category stats error:', err);
+      grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);grid-column:1/-1">❌ Failed to load stats</div>';
+    });
+}
+
+function renderCategoryGrid(categories){
+  const grid = document.getElementById('categoryGrid');
+  if(!categories.length){
+    grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);grid-column:1/-1">No data for this period</div>';
+    return;
+  }
+  const maxCount = Math.max(...categories.map(c => c.total), 1);
+  grid.innerHTML = categories.map(cat => {
+    const pct = cat.total > 0 ? Math.round((cat.replied / cat.total) * 100) : 0;
+    const barPct = Math.round((cat.total / maxCount) * 100);
+    const barColor = pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    return `
+      <div class="cat-card" onclick="openCatModal('${escapeHtml(cat.category)}')">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.5rem">
+          <div style="font-weight:600;font-size:.9rem;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(cat.category)}">${escapeHtml(cat.category)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--accent);flex-shrink:0;margin-left:.5rem">${cat.total}</div>
+        </div>
+        <div style="display:flex;gap:1rem;font-size:.78rem;margin-bottom:.5rem">
+          <span style="color:var(--green)">✓ ${cat.replied} replied</span>
+          <span style="color:var(--yellow)">⏳ ${cat.pending} pending</span>
+        </div>
+        <div class="cat-progress-bar">
+          <div class="cat-progress-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:.3rem;font-size:.72rem">
+          <span style="color:var(--muted)">${pct}% replied</span>
+          <span style="color:var(--muted)">${cat.department || ''}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ════════════════════════════════════════════
+// Category Modal
+// ════════════════════════════════════════════
+function openCatModal(category){
+  document.getElementById('catModal').style.display = 'flex';
+  document.getElementById('catModalTitle').textContent = '🗂️ ' + category;
+  document.getElementById('catModalSub').textContent = 'Detailed breakdown · ' + currentCatFilter.type;
+  document.getElementById('mdTotal').textContent = '—';
+  document.getElementById('mdReplied').textContent = '—';
+  document.getElementById('mdPending').textContent = '—';
+  document.getElementById('catModalEmails').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Loading…</div>';
+
+  let params = `category=${encodeURIComponent(category)}&filter=${currentCatFilter.type}`;
+  if(currentCatFilter.type === 'custom' && currentCatFilter.from){
+    params += `&from=${currentCatFilter.from}&to=${currentCatFilter.to}`;
+  }
+
+  fetch('/api/category_detail?' + params)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('mdTotal').textContent   = data.total   || 0;
+      document.getElementById('mdReplied').textContent = data.replied || 0;
+      document.getElementById('mdPending').textContent = data.pending || 0;
+      renderModalEmails(data.emails || []);
+    })
+    .catch(() => {
+      document.getElementById('catModalEmails').innerHTML = '<div style="color:var(--red);text-align:center;padding:1rem">❌ Failed to load</div>';
+    });
+}
+
+function renderModalEmails(emails){
+  const container = document.getElementById('catModalEmails');
+  if(!emails.length){
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">No emails for this period</div>';
+    return;
+  }
+  container.innerHTML = emails.map(em => `
+    <div class="cat-modal-email-row">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.88rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(em.subject)}">${escapeHtml(em.subject)}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:.2rem">${escapeHtml(em.sender)} · ${escapeHtml(em.date)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;flex-shrink:0">
+        ${em.replied
+          ? '<span style="color:var(--green);font-size:.78rem;white-space:nowrap">✓ Replied</span>'
+          : '<span style="color:var(--yellow);font-size:.78rem;white-space:nowrap">⏳ Pending</span>'
+        }
+        <a href="/view_email/${em.id}" style="color:var(--accent);font-size:.78rem;white-space:nowrap" target="_blank">View →</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function closeCatModal(){
+  document.getElementById('catModal').style.display = 'none';
+}
+
+// Close modal on backdrop click
+document.getElementById('catModal').addEventListener('click', function(e){
+  if(e.target === this) closeCatModal();
+});
+
+// ════════════════════════════════════════════
+// Table helpers
+// ════════════════════════════════════════════
+function addNewEmailToTable(emailData){
+  const tbody = document.getElementById('emailTableBody');
+  if(!tbody) return;
+  const row = document.createElement('tr');
+  row.className = 'email-row';
+  row.dataset.dept = emailData.department || 'unassigned';
+  row.dataset.status = 'pending';
+  row.dataset.id = emailData.id;
+  row.style.background = 'rgba(46,163,242,.08)';
+  row.style.animation = 'fadeIn .4s ease';
+  const deptBadge = emailData.department
+    ? `<span class="badge badge-${emailData.department.toLowerCase().replace(/ /g,'-')}">${emailData.department}</span>`
+    : `<span class="badge badge-new">Unrouted</span>`;
+  row.innerHTML = `
+    <td style="color:var(--muted);font-size:.82rem">${emailData.created_at}</td>
+    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">${escapeHtml(emailData.sender_name || emailData.sender)}</td>
+    <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(emailData.subject)}">${escapeHtml(emailData.subject.substring(0,50))}${emailData.subject.length>50?'…':''}</td>
+    <td><span class="cat-badge" onclick="openCatModal('${escapeHtml(emailData.category)}')" style="font-size:.78rem;color:var(--accent);cursor:pointer;text-decoration:underline;text-decoration-style:dotted">${escapeHtml(emailData.category)}</span></td>
+    <td>${deptBadge}</td>
+    <td><span style="color:var(--yellow);font-size:.82rem">⏳ Pending</span></td>
+    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem;color:var(--muted)">${escapeHtml(emailData.preview)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:.82rem"><span style="background:var(--surface2);padding:.15rem .5rem;border-radius:10px">0</span></td>
+    <td><a href="/view_email/${emailData.id}" style="color:var(--accent);font-size:.85rem">View →</a></td>
+  `;
+  tbody.insertBefore(row, tbody.firstChild);
+  setTimeout(() => { row.style.background = ''; }, 3000);
+  while(tbody.children.length > 300){ if(tbody.lastChild) tbody.removeChild(tbody.lastChild); }
+}
+
+function showNewEmailAlert(emailData){
+  const alert = document.getElementById('newEmailAlert');
+  const details = document.getElementById('newEmailDetails');
+  if(!alert || !details) return;
+  details.textContent = `${emailData.subject} from ${emailData.sender} → ${emailData.department}`;
+  alert.style.display = 'block';
+  setTimeout(() => { alert.style.display = 'none'; }, 5000);
+}
+
+function updateEmailCount(increment){
+  const el = document.getElementById('emailCount');
+  if(el){ const current = parseInt(el.textContent) || 0; el.textContent = current + increment; }
+}
+
+function updateEmailRowStatus(emailId, newStatus){
+  const row = document.querySelector(`.email-row[data-id="${emailId}"]`);
+  if(!row) return;
+  const statusCell = row.cells[5];
+  if(newStatus === 'resolved'){
+    statusCell.innerHTML = '<span style="color:var(--green);font-size:.82rem">✓ Replied</span>';
+    row.dataset.status = 'resolved';
+  }
+}
+
+function addReply(r){
+  const feed = document.getElementById('reply-feed');
+  if(!feed) return;
+  const d = document.createElement('div');
+  d.className = 'reply-item';
+  d.innerHTML = '<div style="display:flex;gap:.8rem;align-items:start"><div style="width:32px;height:32px;background:rgba(63,185,80,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">✉️</div><div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span style="font-weight:600;color:var(--green)">' + escapeHtml((r.subject||'').substring(0,40)) + ((r.subject||'').length>40?'…':'') + '</span><span style="color:var(--muted);font-size:.78rem">' + escapeHtml(r.replied_at||r.timestamp||'') + '</span></div><div style="color:var(--muted);font-size:.8rem">' + escapeHtml(r.department||'') + ' · ' + escapeHtml(r.user_email||'Unknown') + '</div><div style="background:var(--surface2);padding:.5rem .8rem;border-radius:6px;margin-top:.4rem;font-size:.85rem">' + escapeHtml((r.reply_preview||'').substring(0,120)) + ((r.reply_preview||'').length>120?'…':'') + '</div></div></div>';
+  feed.insertBefore(d, feed.firstChild);
+  while(feed.children.length > 25){ if(feed.lastChild) feed.removeChild(feed.lastChild); }
+}
+
+function escapeHtml(str){
+  if(typeof str !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function checkGmailNow(){
+  const btn = event.target;
+  if(!btn) return;
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Fetching…';
+  fetch('/force_gmail_check', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if(d.new_emails > 0){ alert('✅ ' + d.new_emails + ' new email(s) fetched - updating dashboard…'); }
+      else { alert('📭 No new emails'); }
+    })
+    .catch(err => { console.error('Fetch failed:', err); alert('❌ Fetch failed'); })
+    .finally(() => { btn.disabled = false; btn.textContent = original; });
+}
+
+document.getElementById('tableSearch')?.addEventListener('input', function(){
+  const term = this.value.toLowerCase();
+  document.querySelectorAll('.email-row').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  initEmailSSE();
+  initReplySSE();
+  loadCategoryStats(); // Initial load
+
+  // Fallback polling
+  setInterval(() => {
+    fetch('/check_new_emails').then(r => r.json()).then(d => {
+      if(d.new_emails > 0){
+        const dot = document.querySelector('.live-dot');
+        if(dot){
+          dot.style.background = 'var(--yellow)';
+          dot.style.boxShadow = '0 0 8px var(--yellow)';
+          setTimeout(() => { if(dot){ dot.style.background = 'var(--green)'; dot.style.boxShadow = ''; } }, 2000);
+        }
+      }
+    }).catch(() => {});
+  }, 30000);
+});
+
+window.addEventListener('beforeunload', () => {
+  if(emailEs){ emailEs.close(); emailEs = null; }
+  if(replyEs){ replyEs.close(); replyEs = null; }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FILE: templates/login.html                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:400px;margin:60px auto">
+  <div style="text-align:center;margin-bottom:2rem">
+    <div style="font-size:3rem;margin-bottom:.5rem">📬</div>
+    <h1 style="font-size:1.6rem;font-weight:700">SLCI Ticket System</h1>
+    <p style="color:var(--muted);margin-top:.4rem;font-size:.9rem">Sign in to your account</p>
+  </div>
+  <div class="card">
+    <form method="POST">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" class="form-control" name="email" placeholder="info@slci.in" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" class="form-control" name="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn" style="width:100%;justify-content:center;padding:.8rem;margin-top:.5rem">
+        🔑 Sign In
+      </button>
+    </form>
+    <div style="text-align:center;margin-top:1.2rem;color:var(--muted);font-size:.88rem">
+      No account? <a href="{{ url_for('signup') }}" style="color:var(--accent)">Create one</a>
+    </div>
+  </div>
+  <div style="margin-top:1.5rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:.8rem;color:var(--muted)">
+    <strong style="color:var(--text);display:block;margin-bottom:.5rem">Default Accounts</strong>
+    Admin: info@slci.in / INFO@123<br>
+    Client Relations: clientrelation@slci.in / CR@123<br>
+    Audit: audit@slci.in / AUDIT@123<br>
+    Legal: legal@slci.in / LEGAL@123<br>
+    Accounts: accounts@sksharma.in / ACCOUNTS@123
+  </div>
+</div>
+{% endblock %}

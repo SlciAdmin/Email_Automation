@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+  <div>
+    <h1 style="font-size:1.6rem;font-weight:700;display:flex;align-items:center;gap:1rem">
+      📋 My Emails
+      <span class="badge badge-{{ current_user.department|lower|replace(' ','-') }}" style="font-size:.85rem;padding:.4rem .9rem">
+        {{ current_user.department }}
+      </span>
+    </h1>
+    <p style="color:var(--muted);margin-top:.4rem;font-size:.9rem">
+      Welcome, {{ current_user.email }} · {{ assigned_emails|length }} email(s) in your queue
+    </p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number">{{ assigned_emails|length }}</div>
+    <div class="stat-label">Total Emails</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--green)">
+      {{ assigned_emails|selectattr('replied','equalto',true)|list|length }}
+    </div>
+    <div class="stat-label">Replied</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--yellow)">{{ pending_count }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+</div>
+
+<!-- Pending Alert -->
+{% if pending_count > 0 %}
+<div class="card" style="margin-bottom:1.5rem;border-left:3px solid var(--yellow);background:rgba(210,153,34,.06)">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <div style="width:40px;height:40px;background:rgba(210,153,34,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">⏰</div>
+    <div>
+      <h4 style="color:var(--yellow);margin-bottom:.2rem">Pending Replies</h4>
+      <p style="color:var(--muted);font-size:.88rem">You have <strong style="color:var(--text)">{{ pending_count }}</strong> email(s) awaiting reply.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Email List -->
+<div class="card">
+  <div class="card-header">
+    📧 {{ current_user.department }} Emails
+    <span class="badge badge-{{ current_user.department|lower|replace(' ','-') }}">{{ assigned_emails|length }}</span>
+  </div>
+
+  <div style="margin-bottom:1rem">
+    <input type="text" id="emailSearch" placeholder="🔍 Search…" class="form-control" style="max-width:360px">
+  </div>
+
+  {% for email in assigned_emails %}
+  <a href="{{ url_for('view_email', email_id=email.id) }}" class="email-link">
+    <div class="email-item {% if not email.replied %}pending{% else %}resolved{% endif %}" id="email-{{ email.id }}">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem">
+        <div style="flex:1;min-width:0">
+          <!-- Badges -->
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem;align-items:center">
+            <span class="badge badge-{{ (email.assigned_role or '')|lower|replace(' ','-') }}">{{ email.assigned_role or 'Unrouted' }}</span>
+            <span class="badge" style="background:rgba(125,133,144,.15);color:var(--muted)">{{ email.category }}</span>
+            {% if email.replied %}
+              <span class="badge badge-resolved">✓ Replied</span>
+            {% else %}
+              <span class="badge badge-pending">⏳ Pending</span>
+            {% endif %}
+          </div>
+          
+          <!-- Subject & Sender -->
+          <h3 style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ email.subject }}">
+            {{ email.subject }}
+          </h3>
+          <div style="color:var(--muted);font-size:.82rem;margin-bottom:.6rem">
+            From: {{ email.sender_name or email.sender }}
+          </div>
+          
+          <!-- ✅ UPDATED: Body Preview - Clean Plain Text (No HTML Code) -->
+          <div style="
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: .8rem 1rem;
+            border-radius: 8px;
+            font-size: .85rem;
+            color: var(--muted);
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          ">
+            {{ email.get_body_preview(150) }}
+          </div>
+          <!-- ✅ END: Body Preview -->
+          
+        </div>
+        
+        <!-- Meta -->
+        <div style="text-align:right;flex-shrink:0">
+          <div style="color:var(--muted);font-size:.78rem">{{ email.created_at.strftime('%Y-%m-%d') }}</div>
+          <div style="color:var(--muted);font-size:.78rem;margin-top:.3rem">{{ email.created_at.strftime('%H:%M') }}</div>
+          {% set rc = email.replies.count() if email.replies else 0 %}
+          {% if rc > 0 %}
+          <div style="margin-top:.5rem;background:var(--surface2);padding:.15rem .5rem;border-radius:10px;font-size:.75rem;color:var(--accent);font-family:'DM Mono',monospace">{{ rc }} repl{{ 'y' if rc==1 else 'ies' }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </a>
+  {% else %}
+  <div style="text-align:center;padding:4rem 2rem">
+    <div style="font-size:3rem;margin-bottom:1rem">📭</div>
+    <h3 style="color:var(--muted);font-weight:500">No emails yet</h3>
+    <p style="color:var(--muted);font-size:.88rem;margin-top:.4rem">Emails routed to {{ current_user.department }} will appear here automatically.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+document.getElementById('emailSearch')?.addEventListener('keyup', function(){
+  const term = this.value.toLowerCase();
+  document.querySelectorAll('[id^="email-"]').forEach(el => {
+    const parent = el.closest('.email-link');
+    if(parent) { parent.style.display = el.textContent.toLowerCase().includes(term) ? 'block' : 'none'; }
+  });
+});
+</script>
+{% endblock %}

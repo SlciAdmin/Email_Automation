@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <h1 style="font-size:1.4rem;font-weight:700">📧 Email Details</h1>
+        </div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm">← Back</a>
+    </div>
+
+    <!-- Status Card -->
+    <div class="card" style="margin-bottom:1.2rem;background:linear-gradient(135deg,rgba(46,163,242,.06),rgba(63,185,80,.06))">
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center">
+            <div>
+                <div style="color:var(--muted);font-size:.75rem;margin-bottom:.25rem">CATEGORY</div>
+                <span style="font-size:.9rem;color:var(--text)">{{ email.category }}</span>
+            </div>
+            <div>
+                <div style="color:var(--muted);font-size:.75rem;margin-bottom:.25rem">DEPARTMENT</div>
+                <span class="badge badge-{{ (email.assigned_role or '')|lower|replace(' ','-') }}">
+                    {{ email.assigned_role or 'Unrouted' }}</span>
+            </div>
+            <div>
+                <div style="color:var(--muted);font-size:.75rem;margin-bottom:.25rem">STATUS</div>
+                {% if email.replied %}
+                    <span style="color:var(--green);font-size:.9rem">✓ Replied</span>
+                {% else %}
+                    <span style="color:var(--yellow);font-size:.9rem">⏳ Pending</span>
+                {% endif %}
+            </div>
+            <div>
+                <div style="color:var(--muted);font-size:.75rem;margin-bottom:.25rem">RECEIVED</div>
+                <span style="font-size:.88rem;color:var(--muted)">{{ email.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Original Email -->
+    <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-header">📨 Complete Email</div>
+
+        <!-- Email meta headers -->
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem 1.5rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-size:.85rem">From</span>
+            <span style="font-size:.88rem;color:var(--text)">{{ email.get_sender_display() }}</span>
+            <span style="color:var(--muted);font-size:.85rem">Subject</span>
+            <span style="font-size:.95rem;font-weight:500;color:var(--text)">{{ email.subject }}</span>
+            {% if email.cc %}
+            <span style="color:var(--muted);font-size:.85rem">CC</span>
+            <span style="font-size:.85rem;color:var(--muted)">{{ email.cc }}</span>
+            {% endif %}
+            {% if email.has_attachments %}
+            <span style="color:var(--muted);font-size:.85rem">Attachments</span>
+            <span style="font-size:.85rem;color:var(--accent)">📎 {{ email.attachment_files.count() }} file(s)</span>
+            {% endif %}
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             ATTACHMENT SECTION — Full View & Download Support
+        ══════════════════════════════════════════════════ -->
+        {% set att_files = email.get_attachment_files() %}
+        {% if att_files %}
+        <div id="attachmentSection" style="margin-bottom:1.4rem">
+            <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem">
+                <span style="font-weight:600;color:var(--text);font-size:.95rem">📎 Attachments</span>
+                <span style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:.15rem .55rem;border-radius:10px;font-size:.75rem;font-family:'DM Mono',monospace">{{ att_files|length }}</span>
+            </div>
+
+            <!-- Attachment Cards Grid -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.75rem">
+                {% for att in att_files %}
+                <div class="att-card" id="att-card-{{ att.id }}" data-attachment-id="{{ att.id }}">
+
+                    <!-- File Icon & Info -->
+                    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.75rem">
+                        <div class="att-icon-box">
+                            <span class="att-icon">{{ att.get_icon() }}</span>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div class="att-filename" title="{{ att.filename }}">{{ att.filename }}</div>
+                            <div style="color:var(--muted);font-size:.72rem;margin-top:.15rem">
+                                {{ att.get_size_display() }}
+                                <span style="margin:0 .3rem;opacity:.4">·</span>
+                                {{ att.content_type.split('/')[-1]|upper if att.content_type else 'FILE' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display:flex;gap:.5rem">
+                        {% if att.is_viewable_in_browser() %}
+                        <!-- VIEW button — opens in new browser tab -->
+                        <a href="/attachment/{{ att.id }}/view"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="att-btn att-btn-view"
+                           title="Open {{ att.filename }} in new tab">
+                            👁 View
+                        </a>
+                        {% else %}
+                        <!-- Not viewable inline — show disabled view -->
+                        <span class="att-btn att-btn-disabled" title="This file type cannot be previewed in browser">
+                            👁 View
+                        </span>
+                        {% endif %}
+
+                        <!-- DOWNLOAD button — always available -->
+                        <a href="/attachment/{{ att.id }}/download"
+                           download="{{ att.filename }}"
+                           class="att-btn att-btn-download"
+                           title="Download {{ att.filename }}">
+                            ⬇ Download
+                        </a>
+                    </div>
+
+                    <!-- PDF Inline Preview (for PDFs only, collapsible) -->
+                    {% if att.content_type == 'application/pdf' or att.filename.lower().endswith('.pdf') %}
+                    <div style="margin-top:.65rem">
+                        <button
+                            class="att-btn att-btn-preview pdf-preview-btn"
+                            data-attachment-id="{{ att.id }}"
+                            style="width:100%;justify-content:center">
+                            <span class="pdf-toggle-text">▶ Preview PDF</span>
+                        </button>
+                        <div class="pdf-preview-container" data-attachment-id="{{ att.id }}" style="display:none;margin-top:.6rem">
+                            <iframe
+                                src="/attachment/{{ att.id }}/view"
+                                style="width:100%;height:500px;border:1px solid var(--border);border-radius:7px;background:var(--surface2)"
+                                title="{{ att.filename }}">
+                            </iframe>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Image Inline Preview (for images only, collapsible) -->
+                    {% if att.content_type and att.content_type.startswith('image/') %}
+                    <div style="margin-top:.65rem">
+                        <button
+                            class="att-btn att-btn-preview img-preview-btn"
+                            data-attachment-id="{{ att.id }}"
+                            style="width:100%;justify-content:center">
+                            <span class="img-toggle-text">▶ Preview Image</span>
+                        </button>
+                        <div class="img-preview-container" data-attachment-id="{{ att.id }}" style="display:none;margin-top:.6rem;text-align:center">
+                            <img
+                                src="/attachment/{{ att.id }}/view"
+                                alt="{{ att.filename }}"
+                                style="max-width:100%;max-height:400px;border-radius:7px;border:1px solid var(--border);object-fit:contain">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% elif email.has_attachments %}
+        <!-- has_attachments flag set but no records found (legacy emails before migration) -->
+        <div style="margin-bottom:1.2rem;padding:.9rem 1.1rem;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.25);border-radius:8px;font-size:.85rem;color:var(--yellow)">
+            ⚠ This email was flagged as having attachments, but the files were not saved to the database (email received before attachment storage was enabled). Please ask the sender to resend.
+        </div>
+        {% endif %}
+        <!-- ═══════════════ END ATTACHMENT SECTION ═══════════════ -->
+
+        <!-- Email Body -->
+        <div class="email-body-wrapper">
+            {% autoescape false %}
+            {{ email.get_body_for_display()|safe }}
+            {% endautoescape %}
+        </div>
+    </div>
+
+    <!-- Reply History -->
+    {% if replies %}
+    <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-header">💬 Reply History ({{ replies|length }})</div>
+        <div style="max-height:400px;overflow-y:auto">
+            {% for rep in replies|sort(attribute='replied_at') %}
+            <div class="reply-item" style="margin-bottom:1rem">
+                <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
+                    <div>
+                        <span style="font-weight:600;color:var(--green)">Reply #{{ loop.index }}</span>
+                        <span style="color:var(--muted);font-size:.8rem;margin-left:.7rem">
+                            by {{ rep.user.email if rep.user else 'Unknown' }}
+                        </span>
+                        {% if rep.department %}
+                        <span class="badge badge-{{ rep.department|lower|replace(' ','-') }}" style="margin-left:.5rem">{{ rep.department }}</span>
+                        {% endif %}
+                    </div>
+                    <span style="color:var(--muted);font-size:.78rem">{{ rep.replied_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                </div>
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:1rem">
+                    <pre style="white-space:pre-wrap;font-family:'DM Sans',sans-serif;font-size:.88rem;line-height:1.6;color:var(--text);word-break:break-word;margin:0">{{ rep.reply_content }}</pre>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reply Form -->
+    {% if not email.replied %}
+    <div class="card" style="border-left:3px solid var(--accent)">
+        <div class="card-header">✏️ Send Reply</div>
+        <form method="POST" action="{{ url_for('reply_email', email_id=email.id) }}">
+            <div class="form-group">
+                <label>Your Response</label>
+                <textarea class="form-control" name="reply_body" rows="8"
+                          placeholder="Type your professional reply here…" required></textarea>
+                <div style="color:var(--muted);font-size:.78rem;margin-top:.4rem">
+                    This will be sent to <strong>{{ email.sender }}</strong> from info@slci.in and marked as replied.
+                </div>
+            </div>
+            <div style="display:flex;gap:.8rem;margin-top:1rem">
+                <button type="submit" class="btn btn-success"
+                        style="flex:1;justify-content:center;padding:.8rem">🚀 Send Reply</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="card" style="border-left:3px solid var(--green);background:rgba(63,185,80,.06)">
+        <div style="display:flex;align-items:center;gap:1rem">
+            <div style="width:40px;height:40px;background:rgba(63,185,80,.2);border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem">✓</div>
+            <div>
+                <h4 style="color:var(--green);margin:0">Replied</h4>
+                <p style="color:var(--muted);font-size:.88rem;margin:.2rem 0 0 0">
+                    Sent on {{ email.reply_sent_at.strftime('%Y-%m-%d %H:%M') if email.reply_sent_at else 'N/A' }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     STYLES
+═══════════════════════════════════════════════════════ -->
+<style>
+/* ── Attachment Card ── */
+.att-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    transition: border-color .2s, box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+}
+.att-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 3px 0 0 3px;
+}
+.att-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 18px rgba(46,163,242,.12);
+}
+
+/* ── Attachment Icon Box ── */
+.att-icon-box {
+    width: 42px;
+    height: 42px;
+    background: rgba(46,163,242,.1);
+    border: 1px solid rgba(46,163,242,.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.att-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+/* ── Filename ── */
+.att-filename {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* ── Attachment Buttons ── */
+.att-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .35rem .75rem;
+    border-radius: 6px;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    transition: all .18s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.att-btn-view {
+    background: rgba(46,163,242,.15);
+    color: var(--accent);
+    border: 1px solid rgba(46,163,242,.3);
+    flex: 1;
+    justify-content: center;
+}
+.att-btn-view:hover {
+    background: rgba(46,163,242,.28);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.att-btn-download {
+    background: rgba(63,185,80,.15);
+    color: var(--green);
+    border: 1px solid rgba(63,185,80,.3);
+    flex: 1;
+    justify-content: center;
+}
+.att-btn-download:hover {
+    background: rgba(63,185,80,.28);
+    color: var(--green);
+    transform: translateY(-1px);
+}
+
+.att-btn-preview {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: .75rem;
+}
+.att-btn-preview:hover {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--muted);
+}
+
+.att-btn-disabled {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    flex: 1;
+    justify-content: center;
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* ── Email body wrapper ── */
+.email-body-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-height: 600px;
+    overflow-y: auto;
+    line-height: 1.7;
+}
+
+.email-body-wrapper,
+.email-body-wrapper *,
+.email-body-wrapper p,
+.email-body-wrapper span,
+.email-body-wrapper div,
+.email-body-wrapper td,
+.email-body-wrapper th,
+.email-body-wrapper li,
+.email-body-wrapper ul,
+.email-body-wrapper ol,
+.email-body-wrapper h1,
+.email-body-wrapper h2,
+.email-body-wrapper h3,
+.email-body-wrapper h4,
+.email-body-wrapper h5,
+.email-body-wrapper h6,
+.email-body-wrapper strong,
+.email-body-wrapper em,
+.email-body-wrapper b,
+.email-body-wrapper i,
+.email-body-wrapper label,
+.email-body-wrapper blockquote,
+.email-body-wrapper pre,
+.email-body-wrapper code,
+.email-body-wrapper font,
+.email-body-wrapper small,
+.email-body-wrapper caption,
+.email-body-wrapper figcaption,
+.email-body-wrapper address,
+.email-body-wrapper time,
+.email-body-wrapper mark,
+.email-body-wrapper del,
+.email-body-wrapper ins,
+.email-body-wrapper abbr,
+.email-body-wrapper cite,
+.email-body-wrapper q,
+.email-body-wrapper samp,
+.email-body-wrapper var,
+.email-body-wrapper sub,
+.email-body-wrapper sup {
+    color: var(--text) !important;
+    background-color: transparent !important;
+}
+
+.email-body-wrapper table {
+    border-collapse: collapse;
+    width: 100%;
+    background: transparent !important;
+}
+.email-body-wrapper td,
+.email-body-wrapper th {
+    border: 1px solid var(--border) !important;
+    padding: .4rem .7rem;
+}
+.email-body-wrapper a,
+.email-body-wrapper a:visited,
+.email-body-wrapper a:hover {
+    color: var(--accent) !important;
+    text-decoration: underline;
+}
+.email-body-wrapper blockquote {
+    border-left: 3px solid var(--border);
+    margin: .8rem 0;
+    padding: .4rem .8rem;
+    color: #b0bec5 !important;
+}
+.email-body-wrapper pre,
+.email-body-wrapper code {
+    background: var(--surface2) !important;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: .2rem .5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .85rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.email-body-wrapper hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0;
+}
+.email-body-wrapper img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+.email-body-wrapper p {
+    margin: 0 0 .7rem 0;
+}
+.email-body-wrapper > pre {
+    white-space: pre-wrap;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem;
+    margin: 0;
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+    
+    // Get email ID from data attribute or meta tag
+    var emailIdElement = document.querySelector('[data-email-id]');
+    var emailId = emailIdElement ? emailIdElement.getAttribute('data-email-id') : '{{ email.id }}';
+    
+    /* Mark as read silently */
+    fetch('/mark_read/' + emailId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    }).catch(function() {});
+
+    /* Poll for new replies every 15 s */
+    setInterval(function() {
+        fetch('/get_reply_history/' + emailId)
+            .then(function(response) { return response.json(); })
+            .then(function(data) { 
+                if (data && data.success) {
+                    location.reload(); 
+                }
+            })
+            .catch(function() {});
+    }, 15000);
+    
+    /* ── PDF Preview Toggle ── */
+    var pdfButtons = document.querySelectorAll('.pdf-preview-btn');
+    pdfButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var attId = this.getAttribute('data-attachment-id');
+            var container = document.querySelector('.pdf-preview-container[data-attachment-id="' + attId + '"]');
+            var label = this.querySelector('.pdf-toggle-text');
+            
+            if (!container || !label) return;
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                label.textContent = '▼ Hide Preview';
+            } else {
+                container.style.display = 'none';
+                label.textContent = '▶ Preview PDF';
+            }
+        });
+    });
+    
+    /* ── Image Preview Toggle ── */
+    var imgButtons = document.querySelectorAll('.img-preview-btn');
+    imgButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var attId = this.getAttribute('data-attachment-id');
+            var container = document.querySelector('.img-preview-container[data-attachment-id="' + attId + '"]');
+            var label = this.querySelector('.img-toggle-text');
+            
+            if (!container || !label) return;
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                label.textContent = '▼ Hide Preview';
+            } else {
+                container.style.display = 'none';
+                label.textContent = '▶ Preview Image';
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

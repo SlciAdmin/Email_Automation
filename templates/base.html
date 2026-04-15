@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLCI Email Router</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #07090f;
+  --surface:   #0d1117;
+  --surface2:  #161b22;
+  --border:    #21262d;
+  --text:      #e6edf3;
+  --muted:     #7d8590;
+  --accent:    #2ea3f2;
+  --accent2:   #58a6ff;
+  --green:     #3fb950;
+  --yellow:    #d29922;
+  --red:       #f85149;
+  --purple:    #a371f7;
+  --orange:    #db6d28;
+  --cr:        #0ea5e9;
+  --audit:     #a855f7;
+  --legal:     #f59e0b;
+  --accounts:  #10b981;
+  --admin:     #ef4444;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* Header */
+.header{
+  background:rgba(13,17,23,.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:.8rem 2rem;display:flex;justify-content:space-between;align-items:center;
+  position:sticky;top:0;z-index:200;
+}
+.logo{font-size:1.3rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:.6rem;letter-spacing:-.02em}
+.logo-badge{background:var(--accent);color:#000;font-size:.65rem;padding:.2rem .6rem;border-radius:20px;font-weight:700;letter-spacing:.05em}
+.nav-links{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.nav-links a{color:var(--muted);text-decoration:none;padding:.4rem .9rem;border-radius:6px;font-size:.85rem;transition:all .2s;display:flex;align-items:center;gap:.3rem}
+.nav-links a:hover{color:var(--text);background:var(--surface2)}
+.nav-links .nav-dept{font-size:.78rem;padding:.3rem .7rem}
+.user-chip{background:var(--surface2);border:1px solid var(--border);padding:.3rem .8rem;border-radius:20px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+
+/* Container */
+.container{max-width:1440px;margin:0 auto;padding:2rem}
+.content{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Flash messages */
+.flash{padding:.8rem 1.2rem;border-radius:8px;margin:.4rem 0;display:flex;align-items:center;gap:.6rem;font-size:.9rem;animation:slideIn .3s ease}
+.flash.success{background:rgba(63,185,80,.12);border-left:3px solid var(--green);color:#a6f4b0}
+.flash.error{background:rgba(248,81,73,.12);border-left:3px solid var(--red);color:#fca5a5}
+.flash.warning{background:rgba(210,153,34,.12);border-left:3px solid var(--yellow);color:#fde68a}
+@keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.6rem;margin:1rem 0}
+.card-header{font-size:1.1rem;font-weight:600;color:var(--accent);margin-bottom:1.4rem;display:flex;justify-content:space-between;align-items:center}
+
+/* Buttons */
+.btn{background:var(--accent);color:#000;border:none;padding:.55rem 1.3rem;border-radius:7px;cursor:pointer;font-weight:600;font-size:.875rem;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;font-family:inherit}
+.btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface);border-color:var(--accent)}
+.btn-success{background:var(--green);color:#000}
+.btn-danger{background:var(--red);color:#fff}
+.btn-warn{background:var(--yellow);color:#000}
+.btn-sm{padding:.35rem .8rem;font-size:.78rem}
+
+/* Forms */
+.form-group{margin-bottom:1.3rem}
+.form-group label{display:block;margin-bottom:.45rem;color:var(--muted);font-size:.875rem;font-weight:500}
+.form-control{width:100%;padding:.7rem 1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem;transition:all .2s;font-family:inherit}
+.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(46,163,242,.15)}
+select.form-control option{background:var(--surface2)}
+
+
+/* Category Badge Colors for New Priority Categories */
+.badge-reminder { background: rgba(59, 130, 246, .15); color: #3b82f6; border: 1px solid rgba(59,130,246,.3); }
+.badge-important { background: rgba(139, 92, 246, .15); color: #8b5cf6; border: 1px solid rgba(139,92,246,.3); }
+.badge-urgent { background: rgba(239, 68, 68, .15); color: #ef4444; border: 1px solid rgba(239,68,68,.3); font-weight: 600; }
+.badge-delay { background: rgba(245, 158, 11, .15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+.badge-complaint { background: rgba(220, 38, 38, .15); color: #dc2626; border: 1px solid rgba(220,38,38,.3); }
+.badge-no-response { background: rgba(100, 116, 139, .15); color: #64748b; border: 1px solid rgba(100,116,139,.3); }
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.2rem;margin-bottom:1.8rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;text-align:center;transition:all .2s}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-number{font-size:2.2rem;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace}
+.stat-label{color:var(--muted);font-size:.8rem;margin-top:.4rem}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:.2rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.badge-cr,.badge-client-relations{background:rgba(14,165,233,.2);color:#38bdf8;border:1px solid rgba(14,165,233,.3)}
+.badge-audit{background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3)}
+.badge-legal{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
+.badge-accounts{background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.badge-admin{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.badge-success,.badge-resolved{background:rgba(63,185,80,.2);color:#86efac;border:1px solid rgba(63,185,80,.3)}
+.badge-pending{background:rgba(210,153,34,.2);color:#fde68a;border:1px solid rgba(210,153,34,.3)}
+.badge-new{background:rgba(125,133,144,.2);color:#9ca3af;border:1px solid rgba(125,133,144,.3)}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+th{padding:.8rem 1rem;text-align:left;color:var(--muted);font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
+td{padding:.85rem 1rem;border-bottom:1px solid rgba(33,38,45,.6);font-size:.88rem;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Email list */
+.email-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:.8rem;transition:all .2s;cursor:pointer}
+.email-item:hover{border-color:var(--accent);background:var(--surface2)}
+.email-item.pending{border-left:3px solid var(--yellow)}
+.email-item.resolved{border-left:3px solid var(--green)}
+.email-link{text-decoration:none;display:block}
+
+/* Reply item */
+.reply-item{padding:1rem;border-bottom:1px solid var(--border);animation:fadeIn .4s ease}
+.reply-item:hover{background:rgba(46,163,242,.04)}
+
+/* Live dot */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
+.live-dot{width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 1.6s infinite;margin-right:6px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Dept sidebar colors */
+.dept-tag-cr{color:var(--cr)}
+.dept-tag-audit{color:#a855f7}
+.dept-tag-legal{color:#f59e0b}
+.dept-tag-accounts{color:#10b981}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">
+    📬 SLCI
+    <span class="logo-badge">EMAIL ROUTER</span>
+  </div>
+
+  <div class="nav-links">
+    {% if current_user.is_authenticated %}
+      <span class="user-chip">👤 {{ current_user.email }}</span>
+      <span class="badge badge-{{ current_user.department|lower|replace(' ','-') }}">{{ current_user.department }}</span>
+      <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+      
+      <!-- ✅ FIXED: Only show Compose/Export for admin -->
+      {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('fms_dashboard') }}">📋 FMS</a>
+        <a href="{{ url_for('compose_email') }}">✏️ Compose</a>
+        <a href="{{ url_for('export_emails') }}">📤 Export</a>
+      {% endif %}
+      
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">🔑 Login</a>
+      <a href="{{ url_for('signup') }}" class="btn btn-sm">Sign Up</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container">
+  <div class="flash-messages">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">
+            {% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}⚠️{% endif %} {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+  <div class="content">{% block content %}{% endblock %}</div>
+</div>
+
+<script>
+// Auto-hide flash messages
+setTimeout(()=>{
+  document.querySelectorAll('.flash').forEach(f=>{
+    f.style.transition='opacity .5s';f.style.opacity='0';
+    setTimeout(()=>f.remove(),500);
+  });
+},5000);
+</script>
+</body>
+</html>

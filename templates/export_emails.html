@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.8rem;flex-wrap:wrap;gap:.8rem">
+    <div>
+      <h1 style="font-size:1.5rem;font-weight:700">📤 Export Email History</h1>
+      <p style="color:var(--muted);font-size:.88rem;margin-top:.3rem">Filter and download ticket data</p>
+    </div>
+    <div style="display:flex;gap:.7rem">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <a href="{{ url_for('track_tickets') }}" class="btn btn-ghost btn-sm">🎫 Track</a>
+    </div>
+  </div>
+
+  <!-- Quick stats -->
+  <div class="stats-grid" style="margin-bottom:1.5rem">
+    <div class="stat-card"><div class="stat-number" id="s-total">—</div><div class="stat-label">Total (30d)</div></div>
+    <div class="stat-card"><div class="stat-number" id="s-unassigned" style="color:var(--muted)">—</div><div class="stat-label">Unassigned</div></div>
+    <div class="stat-card"><div class="stat-number" id="s-resolved" style="color:var(--green)">—</div><div class="stat-label">Resolved</div></div>
+  </div>
+
+  <!-- Filter form -->
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="card-header">
+      <span>🔍 Filter Options</span>
+      <span id="matchCount" style="color:var(--muted);font-size:.85rem"></span>
+    </div>
+    <form method="POST" action="{{ url_for('export_emails') }}" id="exportForm">
+
+      <h4 style="color:var(--text);margin-bottom:.8rem;font-size:.9rem">📅 Date Range</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:.8rem">
+        <div class="form-group">
+          <label>From Date</label>
+          <input type="date" name="start_date" id="start_date" class="form-control"
+                 value="{{ (now - timedelta(days=30)).strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input type="date" name="end_date" id="end_date" class="form-control"
+                 value="{{ now.strftime('%Y-%m-%d') }}">
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:1.4rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="setDays(7)">Last 7 days</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="setDays(30)">Last 30 days</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="setDays(90)">Last 90 days</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="setDays(365)">This year</button>
+      </div>
+
+      <h4 style="color:var(--text);margin-bottom:.8rem;font-size:.9rem">🎯 Filters</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.2rem;margin-bottom:1.4rem">
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category" id="category" class="form-control">
+            <option value="all">All Categories</option>
+            {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select name="department" id="department" class="form-control">
+            <option value="all">All Departments</option>
+            {% for d in departments %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status" id="status" class="form-control">
+            <option value="all">All</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="assigned">Assigned</option>
+            <option value="pending">Pending</option>
+            <option value="replied">Resolved</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assigned To</label>
+          <select name="assigned_to" id="assigned_to" class="form-control">
+            <option value="all">All Users</option>
+            {% for u in users %}<option value="{{ u.id }}">{{ u.email }} ({{ u.department }})</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <h4 style="color:var(--text);margin-bottom:.8rem;font-size:.9rem">📁 Format</h4>
+      <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:1.5rem">
+        <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);cursor:pointer">
+          <input type="radio" name="export_format" value="csv" checked style="accent-color:var(--accent)">
+          📄 CSV
+        </label>
+        <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);cursor:pointer">
+          <input type="radio" name="export_format" value="excel" style="accent-color:var(--accent)">
+          📊 Excel (.xlsx)
+        </label>
+      </div>
+
+      <div style="display:flex;gap:.8rem">
+        <button type="submit" class="btn btn-success" style="flex:2;justify-content:center;padding:.8rem;font-size:.95rem">
+          ⬇️ Export Tickets
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="resetFilters()" style="flex:1;justify-content:center">🔄 Reset</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  loadStats();
+  ['start_date','end_date','category','department','status','assigned_to'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change',updateCount);
+  });
+  updateCount();
+});
+
+function loadStats(){
+  fetch('/api/email_stats?days=30').then(r=>r.json()).then(d=>{
+    document.getElementById('s-total').textContent=d.total;
+    document.getElementById('s-unassigned').textContent=d.unassigned;
+    document.getElementById('s-resolved').textContent=d.resolved;
+  }).catch(()=>{});
+}
+
+function setDays(n){
+  const now=new Date();const start=new Date();start.setDate(start.getDate()-n);
+  document.getElementById('end_date').value=fmt(now);
+  document.getElementById('start_date').value=fmt(start);
+  updateCount();
+}
+function fmt(d){return d.toISOString().slice(0,10);}
+
+function resetFilters(){
+  setDays(30);
+  ['category','department','status','assigned_to'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='all';
+  });
+  updateCount();
+}
+
+function updateCount(){
+  const fd=new FormData(document.getElementById('exportForm'));
+  fetch('/export_emails',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}})
+  .then(r=>r.json()).then(d=>{
+    const el=document.getElementById('matchCount');
+    if(d.count!==undefined){el.textContent=`📊 ${d.count} ticket(s) match`;}
+  }).catch(()=>{});
+}
+</script>
+{% endblock %}
