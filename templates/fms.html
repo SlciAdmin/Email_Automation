@@ -1,62 +1,155 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
+/* ══ FMS DASHBOARD STYLES ══════════════════════════════════════ */
 .fms-wrap { animation: fadeIn .4s ease }
-.fms-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem }
-.fms-stat { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;transition:all .2s }
+
+/* Stats Row */
+.fms-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.6rem }
+.fms-stat { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;transition:all .2s;cursor:default }
 .fms-stat:hover { border-color:var(--accent);transform:translateY(-2px) }
-.fms-stat-n { font-size:2rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent) }
-.fms-stat-l { color:var(--muted);font-size:.78rem;margin-top:.3rem }
-.fms-cat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem;margin-bottom:1.5rem }
-.fms-cat-card { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden }
-.fms-cat-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--accent) }
+.fms-stat-n { font-size:1.9rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent) }
+.fms-stat-l { color:var(--muted);font-size:.75rem;margin-top:.3rem;text-transform:uppercase;letter-spacing:.05em }
+
+/* Overdue Banner */
+.fms-overdue-banner {
+  background: rgba(248,81,73,.06);
+  border: 1px solid rgba(248,81,73,.28);
+  border-left: 4px solid var(--red);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.4rem;
+}
+.fms-overdue-banner-header {
+  display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap
+}
+
+/* Category Grid */
+.fms-cat-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:.85rem;
+  margin-bottom:1.5rem
+}
+.fms-cat-card {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:1rem 1.1rem;
+  cursor:pointer;
+  transition:all .2s;
+  position:relative;
+  overflow:hidden
+}
+.fms-cat-card::before {
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;border-radius:3px 0 0 3px;background:var(--accent)
+}
+.fms-cat-card.has-overdue::before { background:var(--red) }
 .fms-cat-card.dept-audit::before { background:#a855f7 }
 .fms-cat-card.dept-legal::before { background:#f59e0b }
 .fms-cat-card.dept-accounts::before { background:#10b981 }
-.fms-cat-card:hover,.fms-cat-card.active { border-color:var(--accent);background:rgba(46,163,242,.07) }
-.fms-cat-name { font-weight:600;font-size:.88rem;margin-bottom:.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
-.fms-prog { height:4px;border-radius:2px;background:var(--border);margin-top:.6rem;overflow:hidden }
+.fms-cat-card:hover,.fms-cat-card.active {
+  border-color:var(--accent);
+  background:rgba(46,163,242,.07);
+  transform:translateY(-1px);
+  box-shadow:0 4px 20px rgba(46,163,242,.1)
+}
+.fms-cat-card.has-overdue:hover { border-color:var(--red) }
+.fms-cat-name { font-weight:600;font-size:.88rem;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+.fms-prog { height:4px;border-radius:2px;background:var(--border);margin-top:.65rem;overflow:hidden }
 .fms-prog-fill { height:100%;border-radius:2px;transition:width .6s }
-.fms-co-list { display:flex;flex-direction:column;gap:.6rem }
-.fms-co-row { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;cursor:pointer;transition:all .15s;display:flex;justify-content:space-between;align-items:center;gap:.8rem }
+
+/* Company List */
+.fms-co-list { display:flex;flex-direction:column;gap:.55rem }
+.fms-co-row {
+  background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  padding:.9rem 1rem;cursor:pointer;transition:all .15s;
+  display:flex;justify-content:space-between;align-items:center;gap:.8rem
+}
 .fms-co-row:hover { border-color:var(--accent);background:rgba(46,163,242,.04) }
 .fms-co-row.is-overdue { border-left:3px solid var(--red) }
 .fms-co-row.is-pending { border-left:3px solid var(--yellow) }
 .fms-co-row.is-replied { border-left:3px solid var(--green) }
 .fms-co-name { font-weight:600;font-size:.87rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
-.fms-co-sub { color:var(--muted);font-size:.75rem;margin-top:.2rem }
-.fms-email-row { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.8rem;transition:background .15s }
+.fms-co-sub { color:var(--muted);font-size:.74rem;margin-top:.2rem }
+
+/* Email List */
+.fms-email-row {
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;
+  gap:.8rem;transition:background .15s
+}
 .fms-email-row:hover { background:rgba(46,163,242,.04) }
 .fms-email-row.is-overdue { border-left:3px solid var(--red) }
 .fms-email-row.is-pending { border-left:3px solid var(--yellow) }
 .fms-email-row.is-replied { border-left:3px solid var(--green) }
 .fms-email-subj { font-size:.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0 }
 .fms-email-meta { font-size:.73rem;color:var(--muted);margin-top:.2rem }
+
+/* Tabs */
 .fms-tab-row { display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap }
-.fms-tab { padding:.3rem .8rem;border-radius:6px;cursor:pointer;font-size:.78rem;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all .15s;font-family:inherit }
+.fms-tab {
+  padding:.3rem .85rem;border-radius:6px;cursor:pointer;font-size:.79rem;
+  background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  transition:all .15s;font-family:inherit
+}
 .fms-tab:hover { color:var(--text) }
 .fms-tab.active { background:rgba(46,163,242,.12);border-color:var(--accent);color:var(--accent) }
-.fms-search { padding:.45rem .9rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.85rem;width:240px;font-family:inherit }
+
+/* Search input */
+.fms-search {
+  padding:.42rem .9rem;background:var(--surface2);border:1px solid var(--border);
+  border-radius:7px;color:var(--text);font-size:.84rem;font-family:inherit
+}
 .fms-search:focus { outline:none;border-color:var(--accent) }
-.fms-overdue-banner { background:rgba(248,81,73,.07);border:1px solid rgba(248,81,73,.3);border-radius:10px;padding:1.2rem;margin-bottom:1.4rem }
-.back-link { color:var(--accent);background:none;border:none;cursor:pointer;font-size:.85rem;display:inline-flex;align-items:center;gap:.3rem;font-family:inherit;padding:0;margin-bottom:1.2rem }
+
+/* View containers */
 .fms-view { display:none }
-.fms-view.active { display:block }
+.fms-view.active { display:block;animation:fadeIn .3s ease }
 .fms-empty { text-align:center;padding:3rem;color:var(--muted);font-size:.88rem }
 .fms-section-hdr { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:.8rem }
 .fms-section-title { font-size:1rem;font-weight:600;color:var(--accent) }
+.back-link {
+  color:var(--accent);background:none;border:none;cursor:pointer;font-size:.85rem;
+  display:inline-flex;align-items:center;gap:.3rem;font-family:inherit;padding:0;
+  margin-bottom:1.2rem;transition:opacity .15s
+}
+.back-link:hover { opacity:.75 }
+
+/* Overdue company row inside category view */
+.fms-overdue-co-row {
+  background:rgba(248,81,73,.06);
+  border:1px solid rgba(248,81,73,.25);
+  border-left:3px solid var(--red);
+  border-radius:9px;padding:.9rem 1rem;
+  display:flex;justify-content:space-between;align-items:center;gap:.8rem;
+  cursor:pointer;transition:all .15s;margin-bottom:.5rem
+}
+.fms-overdue-co-row:hover { background:rgba(248,81,73,.1) }
+
+/* Mini badge */
+.mbadge {
+  display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:12px;
+  font-size:.7rem;font-weight:600;white-space:nowrap
+}
+.mbadge-red { background:rgba(248,81,73,.15);color:#f87171;border:1px solid rgba(248,81,73,.3) }
+.mbadge-yellow { background:rgba(210,153,34,.15);color:#fbbf24;border:1px solid rgba(210,153,34,.3) }
+.mbadge-green { background:rgba(63,185,80,.15);color:#86efac;border:1px solid rgba(63,185,80,.3) }
 </style>
 
 <div class="fms-wrap">
 
-<!-- Page Header -->
+<!-- ══ PAGE HEADER ════════════════════════════════════════════ -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.8rem;flex-wrap:wrap;gap:.8rem">
   <div>
-    <h1 style="font-size:1.6rem;font-weight:700;display:flex;align-items:center;gap:.8rem">
-      📋 FMS
-      <span class="badge badge-new" style="font-size:.75rem">Follow-up Management</span>
+    <h1 style="font-size:1.55rem;font-weight:700;display:flex;align-items:center;gap:.8rem">
+      📋 Follow-up Management System
+      <span class="badge badge-new" style="font-size:.73rem">FMS</span>
     </h1>
-    <p style="color:var(--muted);font-size:.88rem;margin-top:.3rem">Track every company, every email, every reply</p>
+    <p style="color:var(--muted);font-size:.86rem;margin-top:.3rem">
+      Track every category → every company → every email → reply status
+    </p>
   </div>
   <div style="display:flex;gap:.7rem">
     <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm">← Dashboard</a>
@@ -64,111 +157,183 @@
   </div>
 </div>
 
-<!-- Loading state -->
+<!-- ══ LOADING ════════════════════════════════════════════════ -->
 <div id="fms-loading" style="text-align:center;padding:4rem;color:var(--muted)">
-  <div style="font-size:2rem;margin-bottom:.8rem">⏳</div>
+  <div style="font-size:2rem;margin-bottom:.8rem;animation:pulse 1.6s infinite">⏳</div>
   Loading FMS data…
 </div>
 
-<!-- Main view: stats + overdue + categories -->
+<!-- ══════════════════════════════════════════════════════════
+     VIEW 1: MAIN — Stats + Global Overdue + Category Grid
+══════════════════════════════════════════════════════════ -->
 <div id="fms-view-main" class="fms-view">
+
+  <!-- Stats -->
   <div class="fms-stats" id="fms-stats-row"></div>
 
-  <!-- Overdue Banner -->
+  <!-- Global Overdue Banner (across ALL categories) -->
   <div id="fms-overdue-banner" class="fms-overdue-banner" style="display:none">
-    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem">
-      <span style="font-size:1rem">⚠️</span>
-      <span style="font-weight:600;color:var(--red);font-size:.95rem">Overdue — No reply in 3+ days</span>
-      <span id="fms-overdue-count" class="badge badge-overdue"></span>
+    <div class="fms-overdue-banner-header">
+      <span style="font-size:1.1rem">⚠️</span>
+      <span style="font-weight:700;color:var(--red);font-size:.95rem">Overdue — No Reply in 3+ Days</span>
+      <span id="fms-overdue-count" class="mbadge mbadge-red"></span>
+      <span style="color:var(--muted);font-size:.8rem">across all categories</span>
     </div>
-    <div id="fms-overdue-list" class="fms-co-list"></div>
+    <!-- grouped by category > company -->
+    <div id="fms-overdue-list"></div>
   </div>
 
   <!-- Category Grid -->
   <div class="card">
     <div class="fms-section-hdr">
-      <span class="fms-section-title">🗂️ Browse by Category</span>
-      <input type="text" id="fms-cat-search" class="fms-search" placeholder="🔍 Search categories…" oninput="filterCatGrid(this.value)">
+      <span class="fms-section-title">🗂️ All Categories</span>
+      <input type="text" id="fms-cat-search" class="fms-search" style="width:220px"
+             placeholder="🔍 Search categories…" oninput="filterCatGrid(this.value)">
     </div>
     <div class="fms-cat-grid" id="fms-cat-grid"></div>
   </div>
 </div>
 
-<!-- Category view: list of companies -->
+<!-- ══════════════════════════════════════════════════════════
+     VIEW 2: CATEGORY — All companies inside one category
+══════════════════════════════════════════════════════════ -->
 <div id="fms-view-category" class="fms-view">
   <button class="back-link" onclick="showMain()">← All Categories</button>
-  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1.2rem;flex-wrap:wrap;gap:.8rem">
-    <div>
-      <h2 id="fms-cat-title" style="font-size:1.3rem;font-weight:700"></h2>
-      <div id="fms-cat-sub" style="color:var(--muted);font-size:.83rem;margin-top:.3rem;display:flex;gap:1rem;flex-wrap:wrap"></div>
+
+  <!-- Category header -->
+  <div style="margin-bottom:1.2rem">
+    <h2 id="fms-cat-title" style="font-size:1.3rem;font-weight:700"></h2>
+    <div id="fms-cat-meta" style="color:var(--muted);font-size:.83rem;margin-top:.35rem;display:flex;gap:1.2rem;flex-wrap:wrap"></div>
+  </div>
+
+  <!-- Overdue companies in this category -->
+  <div id="fms-cat-overdue-section" style="display:none;margin-bottom:1.4rem">
+    <div class="fms-overdue-banner">
+      <div class="fms-overdue-banner-header">
+        <span>⚠️</span>
+        <span style="font-weight:700;color:var(--red);font-size:.9rem">Overdue Companies in this Category</span>
+        <span id="fms-cat-overdue-count" class="mbadge mbadge-red"></span>
+      </div>
+      <div id="fms-cat-overdue-list" class="fms-co-list"></div>
     </div>
-    <input type="text" id="fms-co-search" class="fms-search" placeholder="🔍 Search companies…" oninput="filterCoList(this.value)">
   </div>
-  <div class="fms-tab-row" id="fms-cat-tabs">
-    <button class="fms-tab active" onclick="setCatTab('all',this)">All</button>
-    <button class="fms-tab" onclick="setCatTab('overdue',this)">⚠ Overdue</button>
-    <button class="fms-tab" onclick="setCatTab('pending',this)">⏳ Pending</button>
-    <button class="fms-tab" onclick="setCatTab('replied',this)">✓ Replied</button>
+
+  <!-- All companies -->
+  <div class="card">
+    <div class="fms-section-hdr">
+      <span class="fms-section-title">🏢 Companies</span>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <div class="fms-tab-row" id="fms-cat-tabs" style="margin-bottom:0">
+          <button class="fms-tab active" onclick="setCatTab('all',this)">All</button>
+          <button class="fms-tab" onclick="setCatTab('overdue',this)">⚠ Overdue</button>
+          <button class="fms-tab" onclick="setCatTab('pending',this)">⏳ Pending</button>
+          <button class="fms-tab" onclick="setCatTab('replied',this)">✓ Replied</button>
+        </div>
+        <input type="text" id="fms-co-search" class="fms-search" style="width:190px"
+               placeholder="🔍 Search companies…" oninput="filterCoList(this.value)">
+      </div>
+    </div>
+    <div id="fms-co-list" class="fms-co-list"></div>
   </div>
-  <div id="fms-co-list" class="fms-co-list"></div>
 </div>
 
-<!-- Company view: email tracking -->
+<!-- ══════════════════════════════════════════════════════════
+     VIEW 3: COMPANY — All emails for one company
+══════════════════════════════════════════════════════════ -->
 <div id="fms-view-company" class="fms-view">
   <button class="back-link" id="fms-co-back">← Back to Category</button>
+
   <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1rem;flex-wrap:wrap;gap:.8rem">
     <div>
-      <h2 id="fms-co-title" style="font-size:1.3rem;font-weight:700"></h2>
+      <h2 id="fms-co-title" style="font-size:1.25rem;font-weight:700"></h2>
       <div id="fms-co-meta" style="color:var(--muted);font-size:.82rem;margin-top:.3rem"></div>
     </div>
     <div id="fms-co-badges" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
   </div>
-  <div class="fms-stats" id="fms-co-stats"></div>
 
-  <div class="fms-tab-row">
-    <button class="fms-tab active" onclick="setEmailTab('all',this)">All Emails</button>
-    <button class="fms-tab" onclick="setEmailTab('overdue',this)">⚠ Overdue</button>
-    <button class="fms-tab" onclick="setEmailTab('pending',this)">⏳ Pending</button>
-    <button class="fms-tab" onclick="setEmailTab('replied',this)">✓ Replied</button>
+  <!-- Company stats mini -->
+  <div class="fms-stats" id="fms-co-stats" style="margin-bottom:1.2rem"></div>
+
+  <!-- Company overdue emails -->
+  <div id="fms-co-overdue-section" style="display:none;margin-bottom:1.2rem">
+    <div class="fms-overdue-banner">
+      <div class="fms-overdue-banner-header">
+        <span>⚠️</span>
+        <span style="font-weight:700;color:var(--red);font-size:.88rem">Emails Awaiting Reply for 3+ Days</span>
+        <span id="fms-co-overdue-count" class="mbadge mbadge-red"></span>
+      </div>
+      <div id="fms-co-overdue-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+    </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:.5rem" id="fms-email-list"></div>
+
+  <!-- All emails tab view -->
+  <div class="card">
+    <div class="fms-section-hdr">
+      <span class="fms-section-title">📧 Emails</span>
+      <div class="fms-tab-row" id="fms-email-tabs" style="margin-bottom:0">
+        <button class="fms-tab active" onclick="setEmailTab('all',this)">All</button>
+        <button class="fms-tab" onclick="setEmailTab('overdue',this)">⚠ Overdue</button>
+        <button class="fms-tab" onclick="setEmailTab('pending',this)">⏳ Pending</button>
+        <button class="fms-tab" onclick="setEmailTab('replied',this)">✓ Replied</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.5rem" id="fms-email-list"></div>
+  </div>
 </div>
 
-</div>
+</div><!-- end .fms-wrap -->
 
 <script>
-let fmsData = { companies: [], stats: {} };
-let currentCat = null;
-let currentCo = null;
+'use strict';
+
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let fmsData      = { companies: [], stats: {} };
+let currentCat   = null;
+let currentCo    = null;
 let catTabFilter = 'all';
-let emailTabFilter = 'all';
 
-function companyStatus(co) {
-  const statuses = co.emails.map(e => e.status);
-  if (statuses.includes('overdue')) return 'overdue';
-  if (statuses.includes('pending')) return 'pending';
-  return 'replied';
-}
-
-function deptClass(dept) {
-  const d = (dept || '').toLowerCase().replace(' ', '-');
-  if (d.includes('audit')) return 'dept-audit';
-  if (d.includes('legal')) return 'dept-legal';
-  if (d.includes('account')) return 'dept-accounts';
-  return '';
-}
-
+// ════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════
 function escH(str) {
   const d = document.createElement('div');
   d.textContent = str || '';
   return d.innerHTML;
 }
 
+/**
+ * Determine company-level status from its email statuses.
+ * Priority: overdue > pending > replied
+ */
+function companyStatus(co) {
+  const statuses = (co.emails || []).map(e => e.status);
+  if (statuses.includes('overdue')) return 'overdue';
+  if (statuses.includes('pending')) return 'pending';
+  return 'replied';
+}
+
+function deptClass(dept) {
+  const d = (dept || '').toLowerCase();
+  if (d.includes('audit'))   return 'dept-audit';
+  if (d.includes('legal'))   return 'dept-legal';
+  if (d.includes('account')) return 'dept-accounts';
+  return '';
+}
+
+function pctColor(pct) {
+  return pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+}
+
+// ════════════════════════════════════════════════════════════
+// DATA LOAD
+// ════════════════════════════════════════════════════════════
 function loadFMS() {
   document.getElementById('fms-loading').style.display = 'block';
-  ['fms-view-main','fms-view-category','fms-view-company'].forEach(id => {
-    document.getElementById(id).classList.remove('active');
-  });
+  ['fms-view-main','fms-view-category','fms-view-company'].forEach(id =>
+    document.getElementById(id).classList.remove('active')
+  );
 
   fetch('/api/fms_data')
     .then(r => r.json())
@@ -177,14 +342,20 @@ function loadFMS() {
       document.getElementById('fms-loading').style.display = 'none';
       renderMain();
     })
-    .catch(err => {
+    .catch(() => {
       document.getElementById('fms-loading').innerHTML =
-        '<div style="color:var(--red);text-align:center;padding:3rem">❌ Failed to load FMS data. <button class="btn btn-ghost btn-sm" onclick="loadFMS()">Retry</button></div>';
+        '<div style="color:var(--red);text-align:center;padding:3rem">❌ Failed to load FMS data. ' +
+        '<button class="btn btn-ghost btn-sm" onclick="loadFMS()">Retry</button></div>';
     });
 }
 
+// ════════════════════════════════════════════════════════════
+// VIEW 1: MAIN
+// ════════════════════════════════════════════════════════════
 function renderMain() {
   const s = fmsData.stats;
+
+  // Stats row
   document.getElementById('fms-stats-row').innerHTML = `
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--text)">${s.total_companies||0}</div><div class="fms-stat-l">Companies</div></div>
     <div class="fms-stat"><div class="fms-stat-n">${s.total_emails||0}</div><div class="fms-stat-l">Total Emails</div></div>
@@ -194,73 +365,122 @@ function renderMain() {
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--accent)">${s.total_emails>0?Math.round(s.replied/s.total_emails*100):0}%</div><div class="fms-stat-l">Reply Rate</div></div>
   `;
 
-  // Overdue section
-  const overdueCompanies = fmsData.companies.filter(c => companyStatus(c) === 'overdue');
-  const banner = document.getElementById('fms-overdue-banner');
-  const overdueList = document.getElementById('fms-overdue-list');
-  if (overdueCompanies.length) {
-    banner.style.display = 'block';
-    document.getElementById('fms-overdue-count').textContent = overdueCompanies.length + ' companies';
-    overdueList.innerHTML = '';
-    overdueCompanies.forEach(co => {
-      const ov = co.emails.filter(e => e.status === 'overdue');
-      const row = document.createElement('div');
-      row.className = 'fms-co-row is-overdue';
-      row.innerHTML = `
-        <div style="flex:1;min-width:0">
-          <div class="fms-co-name">${escH(co.name)}</div>
-          <div class="fms-co-sub">${escH(co.cat)} · ${ov.length} email(s) awaiting reply</div>
-        </div>
-        <div style="display:flex;gap:.5rem;align-items:center;flex-shrink:0">
-          <span class="badge badge-overdue">${ov.length} overdue</span>
-          <a href="/view_email/${ov[0] ? ov[0].id : ''}" class="btn btn-sm" style="background:var(--red);color:#fff">View →</a>
-        </div>
-      `;
-      row.onclick = (e) => { if(e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') openCompany(co.name, co.cat); };
-      overdueList.appendChild(row);
-    });
-  } else {
-    banner.style.display = 'none';
-  }
-
-  renderCatGrid(fmsData.companies);
+  renderGlobalOverdue();
+  renderCatGrid();
   document.getElementById('fms-view-main').classList.add('active');
 }
 
-function renderCatGrid(companies) {
-  const catMap = {};
-  companies.forEach(co => {
+/**
+ * Global overdue section: groups overdue emails by Category > Company
+ */
+function renderGlobalOverdue() {
+  const banner   = document.getElementById('fms-overdue-banner');
+  const listEl   = document.getElementById('fms-overdue-list');
+  const countEl  = document.getElementById('fms-overdue-count');
+
+  // Collect all overdue companies
+  const overdueCompanies = fmsData.companies.filter(c => companyStatus(c) === 'overdue');
+  if (!overdueCompanies.length) { banner.style.display = 'none'; return; }
+
+  banner.style.display = 'block';
+  countEl.textContent  = overdueCompanies.length + ' companies';
+  listEl.innerHTML     = '';
+
+  // Group by category
+  const catGroups = {};
+  overdueCompanies.forEach(co => {
     const cat = co.cat || 'General Inquiry';
-    if (!catMap[cat]) catMap[cat] = { cat, dept: co.dept, total: 0, replied: 0, pending: 0, overdue: 0, coCount: 0 };
-    catMap[cat].coCount++;
+    if (!catGroups[cat]) catGroups[cat] = [];
+    catGroups[cat].push(co);
+  });
+
+  Object.entries(catGroups).forEach(([cat, companies]) => {
+    // Category header
+    const catHdr = document.createElement('div');
+    catHdr.style.cssText = 'font-size:.78rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin:.8rem 0 .4rem';
+    catHdr.textContent = '📂 ' + cat;
+    listEl.appendChild(catHdr);
+
+    companies.forEach(co => {
+      const overdueEmails = co.emails.filter(e => e.status === 'overdue');
+      const row = document.createElement('div');
+      row.className = 'fms-overdue-co-row';
+      row.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div class="fms-co-name">🏢 ${escH(co.name)}</div>
+          <div class="fms-co-sub">${escH(cat)} · ${overdueEmails.length} email(s) awaiting reply</div>
+          <div style="margin-top:.4rem;display:flex;gap:.4rem;flex-wrap:wrap">
+            ${overdueEmails.slice(0,3).map(e =>
+              `<span class="mbadge mbadge-red" style="font-size:.67rem" title="${escH(e.subject)}">${escH(e.subject.substring(0,35))}${e.subject.length>35?'…':''} (${e.days_old}d)</span>`
+            ).join('')}
+            ${overdueEmails.length>3?`<span class="mbadge mbadge-red" style="font-size:.67rem">+${overdueEmails.length-3} more</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-shrink:0">
+          <span class="mbadge mbadge-red">${overdueEmails.length} overdue</span>
+          <button class="btn btn-sm" style="background:var(--red);color:#fff;font-size:.75rem"
+            onclick="event.stopPropagation();openCompany('${escH(co.name)}','${escH(co.cat)}')">Track →</button>
+        </div>
+      `;
+      row.onclick = () => openCompany(co.name, co.cat);
+      listEl.appendChild(row);
+    });
+  });
+}
+
+/**
+ * Category grid: one card per category, shows company count + email stats
+ */
+function renderCatGrid() {
+  const grid = document.getElementById('fms-cat-grid');
+  grid.innerHTML = '';
+
+  // Build category map
+  const catMap = {};
+  fmsData.companies.forEach(co => {
+    const cat = co.cat || 'General Inquiry';
+    if (!catMap[cat]) {
+      catMap[cat] = {
+        cat, dept: co.dept,
+        totalCo: 0, total: 0, replied: 0, pending: 0, overdue: 0
+      };
+    }
+    catMap[cat].totalCo++;
     co.emails.forEach(e => {
       catMap[cat].total++;
       catMap[cat][e.status]++;
     });
   });
 
-  const grid = document.getElementById('fms-cat-grid');
-  grid.innerHTML = '';
   const sorted = Object.values(catMap).sort((a,b) => b.total - a.total);
-  if (!sorted.length) { grid.innerHTML = '<div class="fms-empty">No email categories found</div>'; return; }
+  if (!sorted.length) {
+    grid.innerHTML = '<div class="fms-empty">No email categories found</div>';
+    return;
+  }
 
   sorted.forEach(c => {
-    const pct = c.total > 0 ? Math.round(c.replied / c.total * 100) : 0;
-    const barColor = pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
-    const card = document.createElement('div');
-    card.className = 'fms-cat-card ' + deptClass(c.dept);
+    const pct      = c.total > 0 ? Math.round(c.replied / c.total * 100) : 0;
+    const barColor = pctColor(pct);
+    const card     = document.createElement('div');
+    card.className = 'fms-cat-card ' + deptClass(c.dept) + (c.overdue > 0 ? ' has-overdue' : '');
     card.dataset.cat = c.cat;
     card.innerHTML = `
-      <div class="fms-cat-name" title="${escH(c.cat)}">${escH(c.cat)}</div>
-      <div style="color:var(--muted);font-size:.72rem;margin-bottom:.45rem">${escH(c.dept||'—')} · ${c.coCount} co.</div>
-      <div style="display:flex;gap:.7rem;font-size:.73rem;flex-wrap:wrap">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.25rem">
+        <div class="fms-cat-name" title="${escH(c.cat)}">${escH(c.cat)}</div>
+        <span style="font-family:'DM Mono',monospace;font-size:.85rem;font-weight:700;color:var(--accent);flex-shrink:0;margin-left:.4rem">${c.total}</span>
+      </div>
+      <div style="color:var(--muted);font-size:.71rem;margin-bottom:.45rem">
+        ${escH(c.dept||'—')} · <strong style="color:var(--text)">${c.totalCo}</strong> compan${c.totalCo===1?'y':'ies'}
+      </div>
+      <div style="display:flex;gap:.6rem;font-size:.72rem;flex-wrap:wrap">
         <span style="color:var(--green)">✓ ${c.replied}</span>
         <span style="color:var(--yellow)">⏳ ${c.pending}</span>
-        ${c.overdue ? `<span style="color:var(--red)">! ${c.overdue}</span>` : ''}
+        ${c.overdue ? `<span style="color:var(--red);font-weight:700">⚠ ${c.overdue} overdue</span>` : ''}
       </div>
       <div class="fms-prog"><div class="fms-prog-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem;display:flex;justify-content:space-between">
-        <span>${pct}% replied</span><span>${c.total} emails</span>
+      <div style="font-size:.69rem;color:var(--muted);margin-top:.3rem;display:flex;justify-content:space-between">
+        <span>${pct}% replied</span>
+        <span>${c.totalCo} co.</span>
       </div>
     `;
     card.onclick = () => openCategory(c.cat);
@@ -270,72 +490,121 @@ function renderCatGrid(companies) {
 
 function filterCatGrid(term) {
   document.querySelectorAll('.fms-cat-card').forEach(card => {
-    card.style.display = card.dataset.cat.toLowerCase().includes(term.toLowerCase()) ? '' : 'none';
+    card.style.display = (card.dataset.cat || '').toLowerCase().includes(term.toLowerCase()) ? '' : 'none';
   });
 }
 
+// ════════════════════════════════════════════════════════════
+// VIEW 2: CATEGORY
+// ════════════════════════════════════════════════════════════
 function openCategory(cat) {
-  currentCat = cat;
+  currentCat   = cat;
   catTabFilter = 'all';
-  document.getElementById('fms-view-main').classList.remove('active');
+
+  ['fms-view-main','fms-view-company'].forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById('fms-view-category').classList.add('active');
-  document.getElementById('fms-view-company').classList.remove('active');
-  document.getElementById('fms-cat-title').textContent = cat;
-  document.querySelectorAll('#fms-cat-tabs .fms-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('#fms-cat-tabs .fms-tab').classList.add('active');
+  document.getElementById('fms-cat-title').textContent = '🗂️ ' + cat;
   document.getElementById('fms-co-search').value = '';
-  renderCoList(cat, 'all');
+
+  // Reset tabs
+  document.querySelectorAll('#fms-cat-tabs .fms-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+
+  // Category meta stats
+  const companies = fmsData.companies.filter(c => c.cat === cat);
+  const total     = companies.reduce((a,c) => a + c.emails.length, 0);
+  const replied   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='replied').length, 0);
+  const pending   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='pending').length, 0);
+  const overdue   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='overdue').length, 0);
+
+  document.getElementById('fms-cat-meta').innerHTML = `
+    <span><strong style="color:var(--text)">${companies.length}</strong> companies</span>
+    <span><strong style="color:var(--text)">${total}</strong> emails</span>
+    <span style="color:var(--green)">✓ ${replied} replied</span>
+    <span style="color:var(--yellow)">⏳ ${pending} pending</span>
+    ${overdue ? `<span style="color:var(--red);font-weight:600">⚠ ${overdue} overdue</span>` : ''}
+  `;
+
+  // Category-level overdue section
+  renderCatOverdue(companies);
+
+  // Company list
+  renderCoList(companies, 'all');
 }
 
-function renderCoList(cat, filter) {
-  const companies = fmsData.companies.filter(c => c.cat === cat);
+function renderCatOverdue(companies) {
+  const section  = document.getElementById('fms-cat-overdue-section');
+  const listEl   = document.getElementById('fms-cat-overdue-list');
+  const countEl  = document.getElementById('fms-cat-overdue-count');
+  const overdue  = companies.filter(c => companyStatus(c) === 'overdue');
+
+  if (!overdue.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  countEl.textContent   = overdue.length + ' compan' + (overdue.length===1?'y':'ies');
+  listEl.innerHTML      = '';
+
+  overdue.forEach(co => {
+    const ov  = co.emails.filter(e => e.status === 'overdue');
+    const row = document.createElement('div');
+    row.className = 'fms-co-row is-overdue';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div class="fms-co-name">🏢 ${escH(co.name)}</div>
+        <div class="fms-co-sub">${ov.length} email(s) waiting · oldest: ${Math.max(...ov.map(e=>e.days_old))} days</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-shrink:0">
+        <span class="mbadge mbadge-red">${ov.length} overdue</span>
+        <button class="btn btn-sm" style="background:var(--red);color:#fff;font-size:.75rem"
+          onclick="event.stopPropagation();openCompany('${escH(co.name)}','${escH(co.cat)}')">Track →</button>
+      </div>
+    `;
+    row.onclick = () => openCompany(co.name, co.cat);
+    listEl.appendChild(row);
+  });
+}
+
+function renderCoList(companies, filter) {
   let shown = companies;
   if (filter === 'overdue') shown = companies.filter(c => companyStatus(c) === 'overdue');
   else if (filter === 'pending') shown = companies.filter(c => companyStatus(c) === 'pending');
   else if (filter === 'replied') shown = companies.filter(c => companyStatus(c) === 'replied');
 
-  const total = companies.reduce((a,c) => a + c.emails.length, 0);
-  const replied = companies.reduce((a,c) => a + c.emails.filter(e => e.status === 'replied').length, 0);
-  const pending = companies.reduce((a,c) => a + c.emails.filter(e => e.status === 'pending').length, 0);
-  const overdue = companies.reduce((a,c) => a + c.emails.filter(e => e.status === 'overdue').length, 0);
-
-  document.getElementById('fms-cat-sub').innerHTML = `
-    <span>${companies.length} companies</span>
-    <span style="color:var(--text)">${total} emails</span>
-    <span style="color:var(--green)">✓ ${replied} replied</span>
-    <span style="color:var(--yellow)">⏳ ${pending} pending</span>
-    ${overdue ? `<span style="color:var(--red)">! ${overdue} overdue</span>` : ''}
-  `;
-
   const list = document.getElementById('fms-co-list');
   list.innerHTML = '';
-  if (!shown.length) { list.innerHTML = '<div class="fms-empty">No companies for this filter</div>'; return; }
 
-  shown.sort((a,b) => {
-    const order = { overdue: 0, pending: 1, replied: 2 };
-    return order[companyStatus(a)] - order[companyStatus(b)];
-  }).forEach(co => {
-    const st = companyStatus(co);
-    const r = co.emails.filter(e => e.status === 'replied').length;
-    const p = co.emails.filter(e => e.status === 'pending').length;
-    const ov = co.emails.filter(e => e.status === 'overdue').length;
-    const pct = co.emails.length > 0 ? Math.round(r / co.emails.length * 100) : 0;
+  if (!shown.length) {
+    list.innerHTML = '<div class="fms-empty">No companies for this filter</div>';
+    return;
+  }
+
+  // Sort: overdue first, then pending, then replied
+  const order = { overdue: 0, pending: 1, replied: 2 };
+  shown.sort((a,b) => order[companyStatus(a)] - order[companyStatus(b)]).forEach(co => {
+    const st      = companyStatus(co);
+    const replied = co.emails.filter(e => e.status==='replied').length;
+    const pending = co.emails.filter(e => e.status==='pending').length;
+    const ov      = co.emails.filter(e => e.status==='overdue').length;
+    const pct     = co.emails.length > 0 ? Math.round(replied / co.emails.length * 100) : 0;
+
     const row = document.createElement('div');
     row.className = `fms-co-row is-${st}`;
     row.dataset.name = co.name.toLowerCase();
     row.innerHTML = `
       <div style="flex:1;min-width:0">
-        <div class="fms-co-name">${escH(co.name)}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span class="fms-co-name">🏢 ${escH(co.name)}</span>
+          ${ov ? `<span class="mbadge mbadge-red">⚠ ${ov} overdue</span>` : ''}
+        </div>
         <div class="fms-co-sub">${co.emails.length} email(s) · ${pct}% replied</div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">
-          ${r ? `<span class="badge badge-resolved">✓ ${r} replied</span>` : ''}
-          ${p ? `<span class="badge badge-pending">⏳ ${p} pending</span>` : ''}
-          ${ov ? `<span class="badge" style="background:rgba(248,81,73,.15);color:#f87171;border:1px solid rgba(248,81,73,.3)">! ${ov} overdue</span>` : ''}
+          ${replied ? `<span class="mbadge mbadge-green">✓ ${replied} replied</span>` : ''}
+          ${pending ? `<span class="mbadge mbadge-yellow">⏳ ${pending} pending</span>` : ''}
+          ${ov      ? `<span class="mbadge mbadge-red">! ${ov} overdue</span>` : ''}
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm" style="flex-shrink:0">Track →</button>
+      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;font-size:.78rem"
+        onclick="event.stopPropagation();openCompany('${escH(co.name)}','${escH(co.cat)}')">Track →</button>
     `;
-    row.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openCompany(co.name, co.cat); else openCompany(co.name, co.cat); };
+    row.onclick = () => openCompany(co.name, co.cat);
     list.appendChild(row);
   });
 }
@@ -350,79 +619,124 @@ function setCatTab(filter, el) {
   catTabFilter = filter;
   document.querySelectorAll('#fms-cat-tabs .fms-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  renderCoList(currentCat, filter);
+  const companies = fmsData.companies.filter(c => c.cat === currentCat);
+  renderCoList(companies, filter);
 }
 
+// ════════════════════════════════════════════════════════════
+// VIEW 3: COMPANY
+// ════════════════════════════════════════════════════════════
 function openCompany(name, cat) {
-  currentCo = fmsData.companies.find(c => c.name === name && c.cat === (cat || currentCat));
-  if (!currentCo) currentCo = fmsData.companies.find(c => c.name === name);
+  // Find company object
+  currentCo = fmsData.companies.find(c => c.name === name && c.cat === cat)
+           || fmsData.companies.find(c => c.name === name);
   if (!currentCo) return;
-  emailTabFilter = 'all';
 
-  document.getElementById('fms-view-main').classList.remove('active');
-  document.getElementById('fms-view-category').classList.remove('active');
+  ['fms-view-main','fms-view-category'].forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById('fms-view-company').classList.add('active');
+
+  // Back button
   document.getElementById('fms-co-back').onclick = () => {
     if (currentCat) openCategory(currentCat);
     else showMain();
   };
-  document.getElementById('fms-co-title').textContent = currentCo.name;
-  document.getElementById('fms-co-meta').textContent = currentCo.cat + ' · ' + (currentCo.dept || 'Client Relations');
 
-  const total = currentCo.emails.length;
-  const replied = currentCo.emails.filter(e => e.status === 'replied').length;
-  const pending = currentCo.emails.filter(e => e.status === 'pending').length;
-  const overdue = currentCo.emails.filter(e => e.status === 'overdue').length;
-  const pct = total > 0 ? Math.round(replied / total * 100) : 0;
+  // Header
+  document.getElementById('fms-co-title').textContent = '🏢 ' + currentCo.name;
+  document.getElementById('fms-co-meta').textContent  = (currentCo.cat||'—') + ' · ' + (currentCo.dept||'Client Relations');
+
+  const emails  = currentCo.emails || [];
+  const total   = emails.length;
+  const replied = emails.filter(e => e.status==='replied').length;
+  const pending = emails.filter(e => e.status==='pending').length;
+  const ov      = emails.filter(e => e.status==='overdue').length;
+  const pct     = total > 0 ? Math.round(replied / total * 100) : 0;
 
   document.getElementById('fms-co-badges').innerHTML = `
-    ${replied ? `<span class="badge badge-resolved">✓ ${replied} replied</span>` : ''}
-    ${pending ? `<span class="badge badge-pending">⏳ ${pending} pending</span>` : ''}
-    ${overdue ? `<span class="badge" style="background:rgba(248,81,73,.15);color:#f87171;border:1px solid rgba(248,81,73,.3)">! ${overdue} overdue</span>` : ''}
+    ${replied ? `<span class="mbadge mbadge-green">✓ ${replied} replied</span>` : ''}
+    ${pending ? `<span class="mbadge mbadge-yellow">⏳ ${pending} pending</span>` : ''}
+    ${ov      ? `<span class="mbadge mbadge-red">⚠ ${ov} overdue</span>` : ''}
   `;
+
   document.getElementById('fms-co-stats').innerHTML = `
-    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--text)">${total}</div><div class="fms-stat-l">Total Emails</div></div>
+    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--text)">${total}</div><div class="fms-stat-l">Emails</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--green)">${replied}</div><div class="fms-stat-l">Replied</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--yellow)">${pending}</div><div class="fms-stat-l">Pending</div></div>
-    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--red)">${overdue}</div><div class="fms-stat-l">Overdue >3d</div></div>
+    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--red)">${ov}</div><div class="fms-stat-l">Overdue >3d</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--accent)">${pct}%</div><div class="fms-stat-l">Reply Rate</div></div>
   `;
-  document.querySelectorAll('#fms-view-company .fms-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('#fms-view-company .fms-tab').classList.add('active');
-  renderEmailList(currentCo.emails, 'all');
+
+  // Company-level overdue email section
+  renderCoOverdue(emails);
+
+  // Reset tabs
+  document.querySelectorAll('#fms-email-tabs .fms-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  renderEmailList(emails, 'all');
+}
+
+function renderCoOverdue(emails) {
+  const section  = document.getElementById('fms-co-overdue-section');
+  const listEl   = document.getElementById('fms-co-overdue-list');
+  const countEl  = document.getElementById('fms-co-overdue-count');
+  const overdue  = emails.filter(e => e.status === 'overdue');
+
+  if (!overdue.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  countEl.textContent   = overdue.length + ' email' + (overdue.length===1?'':'s');
+  listEl.innerHTML      = '';
+
+  overdue.sort((a,b) => b.days_old - a.days_old).forEach(em => {
+    const row = document.createElement('div');
+    row.className = 'fms-email-row is-overdue';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div class="fms-email-subj" title="${escH(em.subject)}">${escH(em.subject)}</div>
+        <div class="fms-email-meta">Received: ${escH(em.date)} · <span style="color:var(--red);font-weight:600">${em.days_old} days without reply</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+        <span class="mbadge mbadge-red">! ${em.days_old}d</span>
+        <a href="/view_email/${em.id}" class="btn btn-sm" style="background:var(--red);color:#fff;font-size:.75rem">Reply →</a>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
 }
 
 function renderEmailList(emails, filter) {
   let shown = emails;
-  if (filter === 'overdue') shown = emails.filter(e => e.status === 'overdue');
-  else if (filter === 'pending') shown = emails.filter(e => e.status === 'pending');
-  else if (filter === 'replied') shown = emails.filter(e => e.status === 'replied');
+  if (filter === 'overdue') shown = emails.filter(e => e.status==='overdue');
+  else if (filter === 'pending') shown = emails.filter(e => e.status==='pending');
+  else if (filter === 'replied') shown = emails.filter(e => e.status==='replied');
 
   const list = document.getElementById('fms-email-list');
   list.innerHTML = '';
-  if (!shown.length) { list.innerHTML = '<div class="fms-empty">No emails for this filter</div>'; return; }
 
-  shown.sort((a, b) => b.date_ts - a.date_ts).forEach(em => {
+  if (!shown.length) {
+    list.innerHTML = '<div class="fms-empty">No emails for this filter</div>';
+    return;
+  }
+
+  shown.sort((a,b) => b.date_ts - a.date_ts).forEach(em => {
     const st = em.status;
-    const daysOld = em.days_old || 0;
     const statusBadge = st === 'replied'
-      ? `<span class="badge badge-resolved" style="flex-shrink:0">✓ Replied</span>`
+      ? `<span class="mbadge mbadge-green">✓ Replied</span>`
       : st === 'overdue'
-      ? `<span class="badge" style="background:rgba(248,81,73,.15);color:#f87171;border:1px solid rgba(248,81,73,.3);flex-shrink:0">! ${daysOld}d overdue</span>`
-      : `<span class="badge badge-pending" style="flex-shrink:0">⏳ Pending</span>`;
+      ? `<span class="mbadge mbadge-red">⚠ ${em.days_old}d overdue</span>`
+      : `<span class="mbadge mbadge-yellow">⏳ Pending</span>`;
+
     const repliedLine = em.replied && em.replied_at
-      ? `<span style="color:var(--green);margin-left:.6rem">Replied: ${em.replied_at}</span>` : '';
+      ? `<span style="color:var(--green)"> · Replied: ${em.replied_at}</span>` : '';
 
     const row = document.createElement('div');
     row.className = `fms-email-row is-${st}`;
     row.innerHTML = `
       <div style="flex:1;min-width:0">
         <div class="fms-email-subj" title="${escH(em.subject)}">${escH(em.subject)}</div>
-        <div class="fms-email-meta">Received: ${em.date} ${repliedLine}</div>
+        <div class="fms-email-meta">Received: ${escH(em.date)}${repliedLine}</div>
       </div>
       <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
         ${statusBadge}
-        <a href="/view_email/${em.id}" class="btn btn-ghost btn-sm">View →</a>
+        <a href="/view_email/${em.id}" class="btn btn-ghost btn-sm" style="font-size:.75rem">View →</a>
       </div>
     `;
     list.appendChild(row);
@@ -430,20 +744,24 @@ function renderEmailList(emails, filter) {
 }
 
 function setEmailTab(filter, el) {
-  emailTabFilter = filter;
-  document.querySelectorAll('#fms-view-company .fms-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#fms-email-tabs .fms-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  renderEmailList(currentCo.emails, filter);
+  renderEmailList(currentCo.emails || [], filter);
 }
 
+// ════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════
 function showMain() {
   currentCat = null;
-  currentCo = null;
+  currentCo  = null;
+  ['fms-view-category','fms-view-company'].forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById('fms-view-main').classList.add('active');
-  document.getElementById('fms-view-category').classList.remove('active');
-  document.getElementById('fms-view-company').classList.remove('active');
 }
 
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', loadFMS);
 </script>
 {% endblock %}

@@ -831,6 +831,11 @@ def fms_dashboard():
         return redirect(url_for("dashboard"))
     return render_template("fms.html")
 
+# ═══════════════════════════════════════════════════════════════
+# REPLACE the existing api_fms_data route in app.py with this.
+# Better company name extraction + proper structure.
+# ═══════════════════════════════════════════════════════════════
+
 @app.route("/api/fms_data")
 @login_required
 def api_fms_data():
@@ -838,49 +843,99 @@ def api_fms_data():
         return jsonify({"error": "Access denied"}), 403
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=90)
-    emails = Email.query.filter(Email.created_at >= cutoff).order_by(Email.created_at.desc()).all()
+    emails = (
+        Email.query
+        .filter(Email.created_at >= cutoff)
+        .order_by(Email.created_at.desc())
+        .all()
+    )
 
+    # ── Company name extraction ──────────────────────────────────
+    def extract_company(em):
+        """
+        Best-effort company name from sender_name / sender email.
+        Priority:
+          1. sender_name if it looks like a company (no @ sign, non-trivial)
+          2. Domain from sender email, cleaned up
+        """
+        name = (em.sender_name or "").strip()
+
+        # If sender_name looks valid (not just an email address)
+        if name and "@" not in name and len(name) > 2:
+            # Remove common personal prefixes
+            for pfx in ["Mr. ", "Mrs. ", "Ms. ", "Dr. ", "Er. "]:
+                if name.startswith(pfx):
+                    name = name[len(pfx):]
+            return name.strip() or "Unknown"
+
+        # Fall back to domain-based company name
+        sender = em.sender or ""
+        if "@" in sender:
+            domain = sender.split("@")[-1]
+            # Remove common TLDs and clean up
+            domain = domain.replace(".com", "").replace(".in", "").replace(".net", "").replace(".org", "")
+            # Convert dots/hyphens to spaces and title-case
+            company = domain.replace(".", " ").replace("-", " ").replace("_", " ").title().strip()
+            return company if company else "Unknown"
+
+        return "Unknown"
+
+    # ── Group: (company_name, category) → email list ───────────
     company_map = {}
-    for em in emails:
-        # Extract company name from sender_name or sender domain
-        company = em.sender_name or ""
-        if not company or "@" in company:
-            domain = em.sender.split("@")[-1].replace(".com","").replace(".in","").replace("."," ").title()
-            company = domain
-        company = company.strip() or "Unknown"
 
-        key = (company, em.category or "General Inquiry")
+    for em in emails:
+        company  = extract_company(em)
+        cat      = em.category or "General Inquiry"
+        dept     = em.assigned_role or "Client Relations"
+        key      = (company, cat)
+
         if key not in company_map:
-            company_map[key] = {"name": company, "cat": em.category or "General Inquiry",
-                                 "dept": em.assigned_role or "Client Relations", "emails": []}
-        
-        days_old = (datetime.now(timezone.utc) - em.created_at).days if em.created_at else 0
-        status = "replied" if em.replied else ("overdue" if days_old >= 3 else "pending")
-        
+            company_map[key] = {
+                "name":   company,
+                "cat":    cat,
+                "dept":   dept,
+                "emails": []
+            }
+
+        days_old   = (datetime.now(timezone.utc) - em.created_at).days if em.created_at else 0
+        # Status logic: replied → 'replied', else >3 days → 'overdue', else 'pending'
+        if em.replied:
+            status = "replied"
+        elif days_old >= 3:
+            status = "overdue"
+        else:
+            status = "pending"
+
         company_map[key]["emails"].append({
-            "id": em.id,
-            "subject": em.subject or "No Subject",
-            "date": em.created_at.strftime("%Y-%m-%d %H:%M") if em.created_at else "",
-            "date_ts": int(em.created_at.timestamp() * 1000) if em.created_at else 0,
-            "replied": bool(em.replied),
+            "id":        em.id,
+            "subject":   em.subject or "No Subject",
+            "sender":    em.sender or "",
+            "date":      em.created_at.strftime("%Y-%m-%d %H:%M") if em.created_at else "",
+            "date_ts":   int(em.created_at.timestamp() * 1000) if em.created_at else 0,
+            "replied":   bool(em.replied),
             "replied_at": em.reply_sent_at.strftime("%Y-%m-%d %H:%M") if em.reply_sent_at else None,
-            "status": status,
-            "days_old": days_old,
+            "status":    status,
+            "days_old":  days_old,
         })
 
     result = list(company_map.values())
-    
-    total = sum(len(c["emails"]) for c in result)
-    replied = sum(sum(1 for e in c["emails"] if e["replied"]) for c in result)
-    pending = sum(sum(1 for e in c["emails"] if e["status"]=="pending") for c in result)
-    overdue = sum(sum(1 for e in c["emails"] if e["status"]=="overdue") for c in result)
+
+    # ── Aggregate stats ─────────────────────────────────────────
+    total_emails    = sum(len(c["emails"]) for c in result)
+    total_replied   = sum(sum(1 for e in c["emails"] if e["replied"]) for c in result)
+    total_pending   = sum(sum(1 for e in c["emails"] if e["status"] == "pending") for c in result)
+    total_overdue   = sum(sum(1 for e in c["emails"] if e["status"] == "overdue") for c in result)
 
     return jsonify({
         "companies": result,
-        "stats": {"total_emails": total, "replied": replied, "pending": pending,
-                  "overdue": overdue, "total_companies": len(result)}
+        "stats": {
+            "total_emails":    total_emails,
+            "replied":         total_replied,
+            "pending":         total_pending,
+            "overdue":         total_overdue,
+            "total_companies": len(result),
+        }
     })
- 
 
 
 # ─────────────────────────────────────────────
