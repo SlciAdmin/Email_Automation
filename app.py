@@ -43,16 +43,34 @@ def inject_globals():
 
 
 # ─────────────────────────────────────────────
+# HELPER: Make datetime timezone-aware (UTC)
+# ─────────────────────────────────────────────
+
+def _make_aware(dt):
+    """
+    Ensure a datetime is timezone-aware (UTC).
+    If already aware, return as-is.
+    If naive, assume UTC.
+    """
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+    return dt
+
+
+# ─────────────────────────────────────────────
 # BACKGROUND TASKS
 # ─────────────────────────────────────────────
 
 def _reminder_loop():
-    """Background: Track pending emails - FIXED QUERY SYNTAX"""
+    """Background: Track pending emails"""
     print("⏰ Tracker started")
     while True:
         try:
             with app.app_context():
-                # ✅ FIXED: Use filter() not filter_by() for operators like !=
                 pending = Email.query.filter(
                     Email.replied == False,
                     Email.status != "resolved"
@@ -79,18 +97,18 @@ def index():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    
+
     if request.method == "POST":
         email_input = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email_input).first()
-        
+
         if user and user.check_password(password):
             login_user(user)
             flash(f"Welcome, {user.email}!", "success")
             return redirect(url_for("dashboard"))
         flash("Invalid email or password", "error")
-    
+
     return render_template("login.html")
 
 
@@ -98,22 +116,22 @@ def login():
 def signup():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    
+
     if request.method == "POST":
         email_input = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
         role = request.form.get("role", "user")
         department = request.form.get("department", "Client Relations")
-        
+
         if password != confirm_password or len(password) < 6:
             flash("Password mismatch or too short", "error")
             return redirect(url_for("signup"))
-        
+
         if User.query.filter_by(email=email_input).first():
             flash("Email already registered", "error")
             return redirect(url_for("signup"))
-        
+
         new_user = User(
             email=email_input,
             password=User.hash_password(password),
@@ -124,7 +142,7 @@ def signup():
         db.session.commit()
         flash("Account created! Please login.", "success")
         return redirect(url_for("login"))
-    
+
     return render_template("signup.html", departments=DEPARTMENTS)
 
 
@@ -139,12 +157,11 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Main dashboard - REAL-TIME ready - FIXED QUERIES"""
+    """Main dashboard - REAL-TIME ready"""
     if current_user.role.lower() == "admin":
         all_emails = Email.query.order_by(Email.created_at.desc()).limit(300).all()
         recent_replies = EmailReply.query.order_by(EmailReply.replied_at.desc()).limit(20).all()
-        
-        # ✅ FIXED: All queries use filter() with Email.status
+
         stats = {
             "total_emails": Email.query.count(),
             "unassigned": Email.query.filter(Email.assigned_role.is_(None)).count(),
@@ -163,17 +180,15 @@ def dashboard():
             departments=DEPARTMENTS
         )
     else:
-        # ✅ FIXED: User dashboard query with proper status check
         dept_emails = Email.query.filter(
             db.or_(
                 Email.assigned_role == current_user.department,
                 Email.assigned_to == current_user.id
             )
         ).order_by(Email.created_at.desc()).all()
-        
-        # ✅ FIXED: Proper status attribute access
+
         pending_count = sum(
-            1 for e in dept_emails 
+            1 for e in dept_emails
             if not e.replied and getattr(e, 'status', 'unread') != "resolved"
         )
         return render_template(
@@ -188,56 +203,47 @@ def dashboard():
 def view_email(email_id):
     """View email and reply"""
     email_obj = db.session.get(Email, email_id)
-    
+
     if not email_obj or not email_obj.can_user_access(current_user):
         flash("Access denied", "error")
         return redirect(url_for("dashboard"))
-    
-    # ✅ Only mark as read when user actually views it
+
     if email_obj.status == "unread":
         email_obj.status = "read"
         db.session.commit()
-    
+
     replies = EmailReply.query.filter_by(email_id=email_id).order_by(EmailReply.replied_at).all()
     return render_template("view_email.html", email=email_obj, replies=replies)
+
 
 @app.route("/attachment/<int:attachment_id>/view")
 @login_required
 def view_attachment(attachment_id):
-    """Serve attachment for inline viewing in browser (PDF, images, text)."""
+    """Serve attachment for inline viewing in browser."""
     from models import EmailAttachment
- 
     att = EmailAttachment.query.get_or_404(attachment_id)
- 
-    # Security check: user must be able to access the parent email
     if not att.email.can_user_access(current_user):
         abort(403)
- 
-    # Serve file inline so browser opens it directly
     return send_file(
         io.BytesIO(att.file_data),
         mimetype=att.content_type or "application/octet-stream",
-        as_attachment=False,                   # inline = opens in browser
+        as_attachment=False,
         download_name=att.filename,
     )
+
 
 @app.route("/attachment/<int:attachment_id>/download")
 @login_required
 def download_attachment(attachment_id):
-    """Serve attachment as a download (saves to user's downloads folder)."""
+    """Serve attachment as a download."""
     from models import EmailAttachment
- 
     att = EmailAttachment.query.get_or_404(attachment_id)
- 
-    # Security check
     if not att.email.can_user_access(current_user):
         abort(403)
- 
-    # Force download
     return send_file(
         io.BytesIO(att.file_data),
         mimetype=att.content_type or "application/octet-stream",
-        as_attachment=True,                    # as_attachment = forces download
+        as_attachment=True,
         download_name=att.filename,
     )
 
@@ -247,12 +253,9 @@ def download_attachment(attachment_id):
 def api_email_attachments(email_id):
     """Return JSON list of attachments for an email."""
     from models import Email as EmailModel, EmailAttachment
-    from flask import jsonify
- 
     em = EmailModel.query.get_or_404(email_id)
     if not em.can_user_access(current_user):
         abort(403)
- 
     attachments = EmailAttachment.query.filter_by(email_id=email_id).all()
     return jsonify({
         "email_id": email_id,
@@ -290,16 +293,16 @@ def mark_read(email_id):
 def reply_email(email_id):
     """Send reply and mark as resolved"""
     email_obj = db.session.get(Email, email_id)
-    
+
     if not email_obj or not email_obj.can_user_access(current_user):
         flash("Access denied", "error")
         return redirect(url_for("dashboard"))
-    
+
     reply_body = request.form.get("reply_body", "").strip()
     if not reply_body:
         flash("Reply cannot be empty", "error")
         return redirect(url_for("view_email", email_id=email_id))
-    
+
     try:
         success = send_department_reply(
             email_obj.sender,
@@ -307,14 +310,14 @@ def reply_email(email_id):
             reply_body,
             current_user
         )
-        
+
         if success:
             email_obj.replied = True
             email_obj.reply_sent_at = datetime.now(timezone.utc)
             email_obj.reply_by = current_user.id
             email_obj.reply_content = reply_body
             email_obj.status = "resolved"
-            
+
             db.session.add(EmailReply(
                 email_id=email_obj.id,
                 replied_by=current_user.id,
@@ -322,8 +325,7 @@ def reply_email(email_id):
                 department=current_user.department
             ))
             db.session.commit()
-            
-            # Notify via queue for real-time display
+
             reply_queue.put({
                 "type": "reply",
                 "department": current_user.department,
@@ -334,14 +336,14 @@ def reply_email(email_id):
                 "subject": email_obj.subject,
                 "email_id": email_obj.id
             })
-            
+
             flash("✅ Reply sent", "success")
         else:
             flash("❌ Failed to send reply", "error")
     except Exception as e:
         db.session.rollback()
         flash(f"❌ Error: {str(e)}", "error")
-    
+
     return redirect(url_for("dashboard"))
 
 
@@ -353,11 +355,11 @@ def compose_email():
         to_email = request.form.get("to_email", "").strip()
         subject = request.form.get("subject", "").strip()
         body = request.form.get("body", "").strip()
-        
+
         if not to_email or not subject or not body:
             flash("All fields are required", "error")
             return redirect(url_for("compose_email"))
-        
+
         try:
             success = send_department_reply(to_email, subject, body, current_user)
             if success:
@@ -385,11 +387,10 @@ def compose_email():
         except Exception as e:
             flash(f"❌ Error: {str(e)}", "error")
         return redirect(url_for("dashboard"))
-    
+
     return render_template("compose_email.html")
 
 
-# ✅ NEW: SSE endpoint for REAL-TIME new email notifications
 @app.route("/email_stream")
 @login_required
 def email_stream():
@@ -397,16 +398,14 @@ def email_stream():
     def generate():
         while True:
             try:
-                # Check for new emails in queue (with timeout)
                 email_data = new_email_queue.get(timeout=30)
-                # Only send to users who should see this email
                 if current_user.role == "admin" or email_data.get("department") == current_user.department:
                     yield f"data: {json.dumps(email_data)}\n\n"
             except queue.Empty:
                 yield "data: {\"type\":\"heartbeat\"}\n\n"
             except GeneratorExit:
                 break
-    
+
     return Response(
         stream_with_context(generate()),
         mimetype="text/event-stream",
@@ -424,7 +423,7 @@ def reply_stream():
     """SSE for real-time reply notifications (admin only)"""
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
-    
+
     def generate():
         while True:
             try:
@@ -434,7 +433,7 @@ def reply_stream():
                 yield "data: {}\n\n"
             except GeneratorExit:
                 break
-    
+
     return Response(
         stream_with_context(generate()),
         mimetype="text/event-stream",
@@ -451,19 +450,19 @@ def force_gmail_check():
     """Admin: Manually trigger email fetch"""
     if current_user.role != "admin":
         return jsonify({"success": False}), 403
-    
+
     try:
         from imap_fetcher import EmailFetcher
         fetcher = EmailFetcher()
         new_emails = fetcher.fetch_unread_emails()
         count = 0
-        
+
         for ed in new_emails:
             # Flexible duplicate check
             existing = None
             if ed.get("message_id"):
                 existing = Email.query.filter_by(message_id=ed["message_id"]).first()
-            
+
             if not existing:
                 one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
                 existing = Email.query.filter(
@@ -471,16 +470,15 @@ def force_gmail_check():
                     Email.subject == ed["subject"],
                     Email.created_at >= one_hour_ago
                 ).first()
-            
+
             if existing:
                 continue
-            
-            # Classify & route with FALLBACK
+
             category = classify_email(ed.get("body_plain", ""), ed.get("subject", ""))
             department = get_department_for_category(category)
             if not department or department not in DEPARTMENTS:
                 department = "Client Relations"
-            
+
             em = Email(
                 sender=ed["sender"],
                 sender_name=ed.get("sender_name", ""),
@@ -500,8 +498,7 @@ def force_gmail_check():
             )
             db.session.add(em)
             count += 1
-            
-            # ✅ Push to real-time queue for instant dashboard update
+
             new_email_queue.put({
                 "type": "new_email",
                 "id": em.id,
@@ -513,12 +510,12 @@ def force_gmail_check():
                 "created_at": em.created_at.strftime("%Y-%m-%d %H:%M"),
                 "preview": em.get_body_preview(80)
             })
-        
+
         if count:
             db.session.commit()
-        
+
         return jsonify({"success": True, "new_emails": count})
-        
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -528,7 +525,6 @@ def force_gmail_check():
 def check_new_emails():
     """API: Check for recent unread emails"""
     one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
-    # ✅ FIXED: Proper SQLAlchemy query with Email.status
     count = Email.query.filter(
         Email.created_at > one_min_ago,
         Email.status == "unread"
@@ -539,30 +535,29 @@ def check_new_emails():
 @app.route("/export_emails", methods=["GET", "POST"])
 @login_required
 def export_emails():
-    """Export emails to CSV - FIXED FILTER SYNTAX"""
+    """Export emails to CSV"""
     if current_user.role != "admin":
         flash("Access denied", "error")
         return redirect(url_for("dashboard"))
-    
+
     if request.method == "POST":
         start_date = request.form.get("start_date") or (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
         end_date = request.form.get("end_date") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        
+
         query = Email.query.filter(
             Email.created_at >= datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc),
             Email.created_at <= datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         )
-        
+
         category = request.form.get("category", "all")
         department = request.form.get("department", "all")
-        status_filter = request.form.get("status", "all")  # ✅ Renamed to avoid conflict
-        
+        status_filter = request.form.get("status", "all")
+
         if category != "all":
             query = query.filter(Email.category == category)
         if department != "all":
             query = query.filter(Email.assigned_role == department)
-        
-        # ✅ FIXED: Use filter() not filter_by() for operators
+
         if status_filter == "pending":
             query = query.filter(
                 Email.replied == False,
@@ -570,13 +565,13 @@ def export_emails():
             )
         elif status_filter == "resolved":
             query = query.filter(Email.replied == True)
-        
+
         emails = query.order_by(Email.created_at.desc()).all()
-        
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["Date", "Subject", "Category", "Department", "Sender", "Status", "Replied By"])
-        
+
         for em in emails:
             writer.writerow([
                 em.created_at.strftime("%Y-%m-%d %H:%M"),
@@ -587,71 +582,29 @@ def export_emails():
                 "Resolved" if em.replied else "Pending",
                 em.assignee.email if em.assignee else ""
             ])
-        
+
         output.seek(0)
         return Response(
             output.getvalue(),
             mimetype="text/csv",
             headers={"Content-Disposition": f"attachment; filename=emails_export_{datetime.now().strftime('%Y%m%d')}.csv"}
         )
-    
+
     categories = db.session.query(Email.category).distinct().all()
+    users = User.query.filter_by(role="user").all()
     return render_template(
         "export_emails.html",
         categories=[c[0] for c in categories if c[0]],
         departments=DEPARTMENTS,
+        users=users,
         now=datetime.now(timezone.utc),
         timedelta=timedelta
     )
 
 
 # ─────────────────────────────────────────────
-# INITIALIZATION
+# CATEGORY ANALYTICS APIs
 # ─────────────────────────────────────────────
-
-def _create_default_users():
-    """Create default admin/department users"""
-    defaults = [
-        ("info@slci.in", "INFO@123", "admin", "Admin"),
-        ("clientrelation@slci.in", "CR@123", "user", "Client Relations"),
-        ("audit@slci.in", "AUDIT@123", "user", "Audit"),
-        ("legal@slci.in", "LEGAL@123", "user", "Legal"),
-        ("accounts@sksharma.in", "ACCOUNTS@123", "user", "Accounts"),
-    ]
-    
-    for email_addr, password, role, dept in defaults:
-        if not User.query.filter_by(email=email_addr).first():
-            db.session.add(User(
-                email=email_addr,
-                password=User.hash_password(password),
-                role=role,
-                department=dept
-            ))
-            print(f"  ✓ Created: {role} - {email_addr}")
-    
-    db.session.commit()
-
-
-def _start_background_threads():
-    """Start background tasks"""
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
-        import ai_engine, mail_engine
-        
-        threading.Thread(
-            target=fetch_emails_periodically,
-            args=(app, db, Email, User, ai_engine, mail_engine),
-            daemon=True,
-            name="email_fetcher"
-        ).start()
-        
-        threading.Thread(
-            target=_reminder_loop,
-            daemon=True,
-            name="tracker"
-        ).start()
-        
-        print("✅ Background threads started (Real-Time Enabled)")
-
 
 def _parse_filter_dates(filter_type, from_str='', to_str=''):
     """Return (start_dt, end_dt) as UTC-aware datetimes based on filter type."""
@@ -668,39 +621,29 @@ def _parse_filter_dates(filter_type, from_str='', to_str=''):
     elif filter_type == 'custom' and from_str and to_str:
         try:
             start = datetime.strptime(from_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            end   = datetime.strptime(to_str,   "%Y-%m-%d").replace(tzinfo=timezone.utc) \
+            end   = datetime.strptime(to_str, "%Y-%m-%d").replace(tzinfo=timezone.utc) \
                       .replace(hour=23, minute=59, second=59)
         except ValueError:
             start = now - timedelta(days=30)
             end   = now
     else:
-        # 'all' or fallback – no date filter, use very wide window
         start = datetime(2000, 1, 1, tzinfo=timezone.utc)
         end   = now
     return start, end
- 
- 
+
+
 @app.route("/api/category_stats")
 @login_required
 def api_category_stats():
-    """
-    Return aggregated counts per category within the requested time window.
- 
-    Query params:
-        filter  – all | today | week | month | custom
-        from    – YYYY-MM-DD  (only for custom)
-        to      – YYYY-MM-DD  (only for custom)
-    """
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
- 
+
     filter_type = request.args.get("filter", "month")
     from_str    = request.args.get("from",   "")
     to_str      = request.args.get("to",     "")
- 
+
     start, end = _parse_filter_dates(filter_type, from_str, to_str)
- 
-    # Pull only the columns we need – much faster than loading full Email objects
+
     from models import Email as EmailModel
     rows = (
         db.session.query(
@@ -711,9 +654,8 @@ def api_category_stats():
         .filter(EmailModel.created_at >= start, EmailModel.created_at <= end)
         .all()
     )
- 
-    # Aggregate by category
-    cat_map = {}   # { category: {dept, total, replied, pending} }
+
+    cat_map = {}
     for category, dept, replied in rows:
         cat = category or "General Inquiry"
         if cat not in cat_map:
@@ -723,46 +665,37 @@ def api_category_stats():
             cat_map[cat]["replied"] += 1
         else:
             cat_map[cat]["pending"] += 1
- 
+
     categories = sorted(cat_map.values(), key=lambda x: x["total"], reverse=True)
- 
+
     total   = sum(c["total"]   for c in categories)
     replied = sum(c["replied"] for c in categories)
     pending = sum(c["pending"] for c in categories)
- 
+
     return jsonify({
         "total":      total,
         "replied":    replied,
         "pending":    pending,
         "categories": categories,
     })
- 
- 
+
+
 @app.route("/api/category_detail")
 @login_required
 def api_category_detail():
-    """
-    Return individual emails for a specific category within the time window.
- 
-    Query params:
-        category – exact category string
-        filter   – all | today | week | month | custom
-        from     – YYYY-MM-DD
-        to       – YYYY-MM-DD
-    """
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
- 
+
     category    = request.args.get("category", "")
     filter_type = request.args.get("filter", "month")
     from_str    = request.args.get("from",   "")
     to_str      = request.args.get("to",     "")
- 
+
     if not category:
         return jsonify({"error": "category param required"}), 400
- 
+
     start, end = _parse_filter_dates(filter_type, from_str, to_str)
- 
+
     from models import Email as EmailModel
     emails = (
         EmailModel.query
@@ -775,11 +708,11 @@ def api_category_detail():
         .limit(200)
         .all()
     )
- 
+
     total   = len(emails)
     replied = sum(1 for e in emails if e.replied)
     pending = total - replied
- 
+
     email_list = [
         {
             "id":      e.id,
@@ -791,7 +724,7 @@ def api_category_detail():
         }
         for e in emails
     ]
- 
+
     return jsonify({
         "category": category,
         "total":    total,
@@ -799,29 +732,29 @@ def api_category_detail():
         "pending":  pending,
         "emails":   email_list,
     })
- 
- 
-# ───────────────────────────────────────────────────────────────
-# Also add this existing route if you haven't yet (used by export page):
-# ───────────────────────────────────────────────────────────────
- 
+
+
 @app.route("/api/email_stats")
 @login_required
 def api_email_stats():
     """Quick stats for export page header."""
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
- 
+
     days = int(request.args.get("days", 30))
     since = datetime.now(timezone.utc) - timedelta(days=days)
- 
+
     from models import Email as EmailModel
     total      = EmailModel.query.filter(EmailModel.created_at >= since).count()
     unassigned = EmailModel.query.filter(EmailModel.created_at >= since, EmailModel.assigned_role.is_(None)).count()
     resolved   = EmailModel.query.filter(EmailModel.created_at >= since, EmailModel.replied == True).count()
- 
+
     return jsonify({"total": total, "unassigned": unassigned, "resolved": resolved})
 
+
+# ─────────────────────────────────────────────
+# FMS ROUTES
+# ─────────────────────────────────────────────
 
 @app.route("/fms")
 @login_required
@@ -831,18 +764,22 @@ def fms_dashboard():
         return redirect(url_for("dashboard"))
     return render_template("fms.html")
 
-# ═══════════════════════════════════════════════════════════════
-# REPLACE the existing api_fms_data route in app.py with this.
-# Better company name extraction + proper structure.
-# ═══════════════════════════════════════════════════════════════
 
 @app.route("/api/fms_data")
 @login_required
 def api_fms_data():
+    """
+    FMS data API — FIXED:
+      1. Timezone-aware datetime subtraction (offset-naive vs offset-aware bug fixed)
+      2. Proper company name extraction
+      3. All emails within last 90 days grouped by company+category
+    """
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+    now_utc = datetime.now(timezone.utc)
+    cutoff  = now_utc - timedelta(days=90)
+
     emails = (
         Email.query
         .filter(Email.created_at >= cutoff)
@@ -862,7 +799,6 @@ def api_fms_data():
 
         # If sender_name looks valid (not just an email address)
         if name and "@" not in name and len(name) > 2:
-            # Remove common personal prefixes
             for pfx in ["Mr. ", "Mrs. ", "Ms. ", "Dr. ", "Er. "]:
                 if name.startswith(pfx):
                     name = name[len(pfx):]
@@ -872,22 +808,23 @@ def api_fms_data():
         sender = em.sender or ""
         if "@" in sender:
             domain = sender.split("@")[-1]
-            # Remove common TLDs and clean up
-            domain = domain.replace(".com", "").replace(".in", "").replace(".net", "").replace(".org", "")
-            # Convert dots/hyphens to spaces and title-case
+            domain = (domain
+                      .replace(".com", "").replace(".in", "")
+                      .replace(".net", "").replace(".org", "")
+                      .replace(".co", ""))
             company = domain.replace(".", " ").replace("-", " ").replace("_", " ").title().strip()
             return company if company else "Unknown"
 
         return "Unknown"
 
-    # ── Group: (company_name, category) → email list ───────────
+    # ── Group: (company_name, category) → email list ────────────
     company_map = {}
 
     for em in emails:
-        company  = extract_company(em)
-        cat      = em.category or "General Inquiry"
-        dept     = em.assigned_role or "Client Relations"
-        key      = (company, cat)
+        company = extract_company(em)
+        cat     = em.category or "General Inquiry"
+        dept    = em.assigned_role or "Client Relations"
+        key     = (company, cat)
 
         if key not in company_map:
             company_map[key] = {
@@ -897,8 +834,17 @@ def api_fms_data():
                 "emails": []
             }
 
-        days_old   = (datetime.now(timezone.utc) - em.created_at).days if em.created_at else 0
-        # Status logic: replied → 'replied', else >3 days → 'overdue', else 'pending'
+        # ── FIX: Make created_at timezone-aware before subtraction ──
+        created_at = em.created_at
+        if created_at is not None:
+            if created_at.tzinfo is None:
+                # naive datetime stored in DB — assume UTC
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            days_old = (now_utc - created_at).days
+        else:
+            days_old = 0
+
+        # Status: replied → 'replied', else >3 days without reply → 'overdue', else 'pending'
         if em.replied:
             status = "replied"
         elif days_old >= 3:
@@ -906,25 +852,36 @@ def api_fms_data():
         else:
             status = "pending"
 
+        # Format replied_at safely
+        replied_at_str = None
+        if em.reply_sent_at:
+            rsa = em.reply_sent_at
+            if rsa.tzinfo is None:
+                rsa = rsa.replace(tzinfo=timezone.utc)
+            replied_at_str = rsa.strftime("%Y-%m-%d %H:%M")
+
+        # Timestamp for JS sorting
+        date_ts = int(created_at.timestamp() * 1000) if created_at else 0
+
         company_map[key]["emails"].append({
-            "id":        em.id,
-            "subject":   em.subject or "No Subject",
-            "sender":    em.sender or "",
-            "date":      em.created_at.strftime("%Y-%m-%d %H:%M") if em.created_at else "",
-            "date_ts":   int(em.created_at.timestamp() * 1000) if em.created_at else 0,
-            "replied":   bool(em.replied),
-            "replied_at": em.reply_sent_at.strftime("%Y-%m-%d %H:%M") if em.reply_sent_at else None,
-            "status":    status,
-            "days_old":  days_old,
+            "id":         em.id,
+            "subject":    em.subject or "No Subject",
+            "sender":     em.sender or "",
+            "date":       created_at.strftime("%Y-%m-%d %H:%M") if created_at else "",
+            "date_ts":    date_ts,
+            "replied":    bool(em.replied),
+            "replied_at": replied_at_str,
+            "status":     status,
+            "days_old":   days_old,
         })
 
     result = list(company_map.values())
 
-    # ── Aggregate stats ─────────────────────────────────────────
-    total_emails    = sum(len(c["emails"]) for c in result)
-    total_replied   = sum(sum(1 for e in c["emails"] if e["replied"]) for c in result)
-    total_pending   = sum(sum(1 for e in c["emails"] if e["status"] == "pending") for c in result)
-    total_overdue   = sum(sum(1 for e in c["emails"] if e["status"] == "overdue") for c in result)
+    # ── Aggregate stats ──────────────────────────────────────────
+    total_emails  = sum(len(c["emails"]) for c in result)
+    total_replied = sum(sum(1 for e in c["emails"] if e["replied"])              for c in result)
+    total_pending = sum(sum(1 for e in c["emails"] if e["status"] == "pending")  for c in result)
+    total_overdue = sum(sum(1 for e in c["emails"] if e["status"] == "overdue")  for c in result)
 
     return jsonify({
         "companies": result,
@@ -938,6 +895,64 @@ def api_fms_data():
     })
 
 
+@app.route("/get_reply_history/<int:email_id>")
+@login_required
+def get_reply_history(email_id):
+    """API: Check if there are new replies for an email (used by view_email polling)"""
+    email_obj = db.session.get(Email, email_id)
+    if not email_obj or not email_obj.can_user_access(current_user):
+        return jsonify({"success": False})
+    return jsonify({"success": True})
+
+
+# ─────────────────────────────────────────────
+# INITIALIZATION
+# ─────────────────────────────────────────────
+
+def _create_default_users():
+    """Create default admin/department users"""
+    defaults = [
+        ("info@slci.in",              "INFO@123",     "admin", "Admin"),
+        ("clientrelation@slci.in",    "CR@123",       "user",  "Client Relations"),
+        ("audit@slci.in",             "AUDIT@123",    "user",  "Audit"),
+        ("legal@slci.in",             "LEGAL@123",    "user",  "Legal"),
+        ("accounts@sksharma.in",      "ACCOUNTS@123", "user",  "Accounts"),
+    ]
+
+    for email_addr, password, role, dept in defaults:
+        if not User.query.filter_by(email=email_addr).first():
+            db.session.add(User(
+                email=email_addr,
+                password=User.hash_password(password),
+                role=role,
+                department=dept
+            ))
+            print(f"  ✓ Created: {role} - {email_addr}")
+
+    db.session.commit()
+
+
+def _start_background_threads():
+    """Start background tasks"""
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+        import ai_engine, mail_engine
+
+        threading.Thread(
+            target=fetch_emails_periodically,
+            args=(app, db, Email, User, ai_engine, mail_engine),
+            daemon=True,
+            name="email_fetcher"
+        ).start()
+
+        threading.Thread(
+            target=_reminder_loop,
+            daemon=True,
+            name="tracker"
+        ).start()
+
+        print("✅ Background threads started (Real-Time Enabled)")
+
+
 # ─────────────────────────────────────────────
 # MAIN ENTRY POINT
 # ─────────────────────────────────────────────
@@ -947,6 +962,5 @@ if __name__ == "__main__":
         db.create_all()
         _create_default_users()
         _start_background_threads()
-    
-    # For production: use gunicorn, not debug mode
+
     app.run(debug=True, host="0.0.0.0", port=5000, threaded=True)

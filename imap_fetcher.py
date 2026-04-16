@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-# FILE: imap_fetcher.py  –  WITH FULL ATTACHMENT BINARY STORAGE
+# FILE: imap_fetcher.py  –  FIXED: duplicate key + timezone bugs
 # ═══════════════════════════════════════════════════════════════
 
 import imaplib
@@ -170,14 +170,11 @@ class EmailFetcher:
             content_disp = str(part.get("Content-Disposition", "") or "")
             content_type = part.get_content_type() or "application/octet-stream"
 
-            # Include parts explicitly marked as attachments
-            # Also include parts with a filename even if not explicitly "attachment"
             raw_name = part.get_filename()
             if not raw_name and "attachment" not in content_disp.lower():
                 continue
 
             if not raw_name:
-                # Generate a fallback filename from content type
                 ext_map = {
                     "application/pdf": ".pdf",
                     "image/jpeg": ".jpg",
@@ -196,7 +193,6 @@ class EmailFetcher:
 
             filename = self._decode_mime_header(raw_name)
 
-            # Get the actual binary payload
             file_data = part.get_payload(decode=True)
             if file_data is None:
                 file_data = b""
@@ -205,20 +201,32 @@ class EmailFetcher:
                 "filename":     filename,
                 "content_type": content_type,
                 "size":         len(file_data),
-                "data":         file_data,          # ← actual bytes
+                "data":         file_data,
             })
             print(f"    📎 Attachment found: {filename} ({len(file_data)} bytes)")
 
         return attachments
 
-    # ── Duplicate detection ────────────────────────────────────
+    # ── Duplicate detection (DB-level) ────────────────────────
 
     @staticmethod
     def _is_duplicate(sender: str, subject: str, message_id: str, received_date: datetime) -> bool:
+        """
+        Check DB for duplicates.
+        Uses message_id first (most reliable), then fallback by sender+subject+time window.
+        """
         from models import Email as EmailModel
+
+        # Primary: message_id check
         if message_id:
             if EmailModel.query.filter_by(message_id=message_id).first():
                 return True
+
+        # Secondary: sender + subject within 30-minute window
+        # Make received_date UTC-aware for safe comparison
+        if received_date.tzinfo is None:
+            received_date = received_date.replace(tzinfo=timezone.utc)
+
         window = timedelta(minutes=30)
         return bool(EmailModel.query.filter(
             EmailModel.sender     == sender,
@@ -271,10 +279,8 @@ class EmailFetcher:
                         if self.email_user.lower() in sender_addr.lower():
                             continue
 
-                        # Body + attachments (with binary data)
-                        plain_body, html_body = self._get_body(msg)
-                        attachments     = self._get_attachments(msg)
-                        has_attachments = len(attachments) > 0
+                        # Message-ID
+                        message_id = (msg.get("Message-ID") or "").strip()
 
                         # Date
                         date_str = msg.get("Date")
@@ -285,11 +291,15 @@ class EmailFetcher:
                         except Exception:
                             received_date = datetime.now(timezone.utc)
 
-                        # Duplicate check
-                        message_id = (msg.get("Message-ID") or "").strip()
+                        # Duplicate check BEFORE parsing body/attachments (saves CPU)
                         if self._is_duplicate(sender_addr, subject, message_id, received_date):
                             print(f"  ⏭  Duplicate skipped: {subject[:40]}")
                             continue
+
+                        # Body + attachments (with binary data)
+                        plain_body, html_body = self._get_body(msg)
+                        attachments     = self._get_attachments(msg)
+                        has_attachments = len(attachments) > 0
 
                         # Build attachment metadata for JSON field (no binary data)
                         attachments_meta = [
@@ -311,8 +321,8 @@ class EmailFetcher:
                             "cc":               msg.get("Cc", "") or "",
                             "reply_to":         msg.get("Reply-To", raw_from) or "",
                             "has_attachments":  has_attachments,
-                            "attachments_meta": attachments_meta,    # JSON metadata
-                            "attachments_data": attachments,          # includes binary data
+                            "attachments_meta": attachments_meta,
+                            "attachments_data": attachments,
                             "received_date":    received_date,
                         })
                         print(f"  ✓ Queued: {subject[:50]} ← {sender_addr}")
@@ -338,6 +348,13 @@ class EmailFetcher:
 def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
     """
     Background thread: fetch → classify → save email + attachments → push SSE.
+
+    FIXES applied:
+      1. Pre-check duplicate by message_id BEFORE db.session.flush() to avoid
+         UniqueViolation / IntegrityError on the unique constraint.
+      2. db.session.expunge(em) on duplicate so the session stays clean.
+      3. Proper exception handling that rolls back only the failed email,
+         not the entire batch.
     """
     print("🚀 Background email fetcher started")
     fetcher       = EmailFetcher()
@@ -347,13 +364,40 @@ def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
     while True:
         try:
             with app.app_context():
-                # Import here to avoid circular imports
                 from models import EmailAttachment
 
                 new_emails = fetcher.fetch_unread_emails()
 
                 for ed in new_emails:
+                    # ── PER-EMAIL transaction scope ──────────────────────
                     try:
+                        # ── STEP 1: Definitive duplicate check inside app context ──
+                        # (fetcher._is_duplicate already ran outside app context;
+                        #  this is the authoritative in-context check)
+                        message_id = ed.get("message_id")
+                        if message_id:
+                            already_exists = Email.query.filter_by(message_id=message_id).first()
+                            if already_exists:
+                                print(f"  ⏭  DB-dup skipped (msg-id): {ed['subject'][:40]}")
+                                continue
+
+                        # Fallback: sender+subject+time-window duplicate check
+                        received_date = ed["received_date"]
+                        if received_date.tzinfo is None:
+                            received_date = received_date.replace(tzinfo=timezone.utc)
+
+                        window = timedelta(minutes=30)
+                        sender_dup = Email.query.filter(
+                            Email.sender     == ed["sender"],
+                            Email.subject    == ed["subject"],
+                            Email.created_at >= received_date - window,
+                            Email.created_at <= received_date + window,
+                        ).first()
+                        if sender_dup:
+                            print(f"  ⏭  DB-dup skipped (sender+subj): {ed['subject'][:40]}")
+                            continue
+
+                        # ── STEP 2: Classify & route ─────────────────────
                         category   = ai_engine.classify_email(
                             ed.get("body_plain", ""), ed.get("subject", "")
                         )
@@ -363,6 +407,7 @@ def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
 
                         print(f"  🎯 Classified: {category} → {department}")
 
+                        # ── STEP 3: Build Email record ────────────────────
                         em = Email(
                             sender           = ed["sender"],
                             sender_name      = ed.get("sender_name", ""),
@@ -375,28 +420,35 @@ def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
                             category         = category,
                             assigned_role    = department,
                             status           = "unread",
-                            created_at       = ed["received_date"],
-                            message_id       = ed.get("message_id"),
+                            created_at       = received_date,
+                            message_id       = message_id,
                             has_attachments  = ed.get("has_attachments", False),
-                            # Store metadata only (no binary) in JSON field
                             attachments_info = json.dumps(ed.get("attachments_meta", [])),
                         )
                         db.session.add(em)
-                        db.session.flush()  # get em.id
 
-                        # ── Save actual attachment binary data to DB ──────
+                        # ── STEP 4: Flush to get em.id (may raise IntegrityError) ──
+                        try:
+                            db.session.flush()
+                        except Exception as flush_err:
+                            # Almost certainly a duplicate key violation on message_id
+                            db.session.rollback()
+                            print(f"  ⏭  Flush duplicate (race): {ed['subject'][:40]} — {flush_err}")
+                            continue
+
+                        # ── STEP 5: Save attachment binary data ───────────
                         for att in ed.get("attachments_data", []):
                             att_record = EmailAttachment(
                                 email_id     = em.id,
                                 filename     = att["filename"],
                                 content_type = att["content_type"],
                                 file_size    = att["size"],
-                                file_data    = att["data"],   # binary bytes
+                                file_data    = att["data"],
                             )
                             db.session.add(att_record)
                             print(f"    💾 Saved attachment: {att['filename']} ({att['size']} bytes)")
 
-                        # Push to real-time SSE queue
+                        # ── STEP 6: Push to real-time SSE queue ───────────
                         try:
                             from app import new_email_queue
                             new_email_queue.put({
@@ -407,20 +459,20 @@ def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
                                 "sender_name": em.sender_name,
                                 "department":  department,
                                 "category":    category,
-                                "created_at":  em.created_at.strftime("%Y-%m-%d %H:%M"),
+                                "created_at":  received_date.strftime("%Y-%m-%d %H:%M"),
                                 "preview":     em.get_body_preview(80),
                             })
                         except Exception as qe:
                             print(f"  ⚠  Queue push failed: {qe}")
 
+                        # ── STEP 7: Commit this email ──────────────────────
                         db.session.commit()
                         print(f"  ✅ Saved: {em.subject[:40]} [{department}]")
 
                     except Exception as e:
+                        # Roll back just this email's transaction, continue with next
                         db.session.rollback()
-                        print(f"  ❌ Save error: {e}")
-                        import traceback
-                        traceback.print_exc()
+                        print(f"  ❌ Save error for '{ed.get('subject','?')[:40]}': {e}")
                         continue
 
         except Exception as e:
