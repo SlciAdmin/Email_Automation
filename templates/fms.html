@@ -5,56 +5,42 @@
 .fms-wrap { animation: fadeIn .4s ease }
 
 /* Stats Row */
-.fms-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.6rem }
+.fms-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1.6rem }
 .fms-stat { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;transition:all .2s;cursor:default }
 .fms-stat:hover { border-color:var(--accent);transform:translateY(-2px) }
 .fms-stat-n { font-size:1.9rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent) }
 .fms-stat-l { color:var(--muted);font-size:.75rem;margin-top:.3rem;text-transform:uppercase;letter-spacing:.05em }
 
 /* Overdue Banner */
-.fms-overdue-banner {
-  background: rgba(248,81,73,.06);
-  border: 1px solid rgba(248,81,73,.28);
-  border-left: 4px solid var(--red);
-  border-radius: 10px;
-  padding: 1.2rem 1.4rem;
-  margin-bottom: 1.4rem;
-}
-.fms-overdue-banner-header {
-  display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap
-}
+.fms-overdue-banner { background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.28);border-left:4px solid var(--red);border-radius:10px;padding:1.2rem 1.4rem;margin-bottom:1.4rem }
+.fms-overdue-banner-header { display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap }
+
+/* ══ LAYOUT: Sidebar + Content ══════════════════════════════════ */
+.fms-layout { display:grid;grid-template-columns:260px 1fr;gap:1.2rem;align-items:start }
+@media(max-width:900px){ .fms-layout { grid-template-columns:1fr } }
+
+/* Filter Sidebar */
+.fms-sidebar { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;position:sticky;top:80px }
+.fms-sidebar-title { font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem }
+.fms-filter-group { margin-bottom:1.2rem }
+.fms-filter-label { font-size:.75rem;color:var(--muted);margin-bottom:.45rem;display:block }
+.fms-filter-check { display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;border-radius:6px;cursor:pointer;transition:background .15s;font-size:.82rem;color:var(--text) }
+.fms-filter-check:hover { background:var(--surface2) }
+.fms-filter-check input { accent-color:var(--accent) }
+.fms-filter-check .fms-cat-count { margin-left:auto;font-size:.72rem;font-family:'DM Mono',monospace;background:var(--surface2);padding:.1rem .45rem;border-radius:10px;color:var(--muted) }
+.fms-filter-check.has-overdue .fms-cat-count { background:rgba(248,81,73,.12);color:var(--red) }
+.fms-clear-filters { width:100%;padding:.4rem;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:.78rem;cursor:pointer;transition:all .15s;font-family:inherit;margin-top:.4rem }
+.fms-clear-filters:hover { border-color:var(--accent);color:var(--accent) }
 
 /* Category Grid */
-.fms-cat-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-  gap:.85rem;
-  margin-bottom:1.5rem
-}
-.fms-cat-card {
-  background:var(--surface2);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:1rem 1.1rem;
-  cursor:pointer;
-  transition:all .2s;
-  position:relative;
-  overflow:hidden
-}
-.fms-cat-card::before {
-  content:'';position:absolute;left:0;top:0;bottom:0;
-  width:3px;border-radius:3px 0 0 3px;background:var(--accent)
-}
+.fms-cat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.85rem;margin-bottom:1.5rem }
+.fms-cat-card { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden }
+.fms-cat-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--accent) }
 .fms-cat-card.has-overdue::before { background:var(--red) }
 .fms-cat-card.dept-audit::before { background:#a855f7 }
 .fms-cat-card.dept-legal::before { background:#f59e0b }
 .fms-cat-card.dept-accounts::before { background:#10b981 }
-.fms-cat-card:hover,.fms-cat-card.active {
-  border-color:var(--accent);
-  background:rgba(46,163,242,.07);
-  transform:translateY(-1px);
-  box-shadow:0 4px 20px rgba(46,163,242,.1)
-}
+.fms-cat-card:hover,.fms-cat-card.active { border-color:var(--accent);background:rgba(46,163,242,.07);transform:translateY(-1px);box-shadow:0 4px 20px rgba(46,163,242,.1) }
 .fms-cat-card.has-overdue:hover { border-color:var(--red) }
 .fms-cat-name { font-weight:600;font-size:.88rem;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
 .fms-prog { height:4px;border-radius:2px;background:var(--border);margin-top:.65rem;overflow:hidden }
@@ -62,11 +48,7 @@
 
 /* Company List */
 .fms-co-list { display:flex;flex-direction:column;gap:.55rem }
-.fms-co-row {
-  background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-  padding:.9rem 1rem;cursor:pointer;transition:all .15s;
-  display:flex;justify-content:space-between;align-items:center;gap:.8rem
-}
+.fms-co-row { background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:.9rem 1rem;cursor:pointer;transition:all .15s;display:flex;justify-content:space-between;align-items:center;gap:.8rem }
 .fms-co-row:hover { border-color:var(--accent);background:rgba(46,163,242,.04) }
 .fms-co-row.is-overdue { border-left:3px solid var(--red) }
 .fms-co-row.is-pending { border-left:3px solid var(--yellow) }
@@ -75,11 +57,7 @@
 .fms-co-sub { color:var(--muted);font-size:.74rem;margin-top:.2rem }
 
 /* Email List */
-.fms-email-row {
-  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-  padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;
-  gap:.8rem;transition:background .15s
-}
+.fms-email-row { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.8rem;transition:background .15s }
 .fms-email-row:hover { background:rgba(46,163,242,.04) }
 .fms-email-row.is-overdue { border-left:3px solid var(--red) }
 .fms-email-row.is-pending { border-left:3px solid var(--yellow) }
@@ -89,20 +67,26 @@
 
 /* Tabs */
 .fms-tab-row { display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap }
-.fms-tab {
-  padding:.3rem .85rem;border-radius:6px;cursor:pointer;font-size:.79rem;
-  background:var(--surface2);border:1px solid var(--border);color:var(--muted);
-  transition:all .15s;font-family:inherit
-}
+.fms-tab { padding:.3rem .85rem;border-radius:6px;cursor:pointer;font-size:.79rem;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all .15s;font-family:inherit }
 .fms-tab:hover { color:var(--text) }
 .fms-tab.active { background:rgba(46,163,242,.12);border-color:var(--accent);color:var(--accent) }
 
 /* Search input */
-.fms-search {
-  padding:.42rem .9rem;background:var(--surface2);border:1px solid var(--border);
-  border-radius:7px;color:var(--text);font-size:.84rem;font-family:inherit
-}
+.fms-search { padding:.42rem .9rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.84rem;font-family:inherit }
 .fms-search:focus { outline:none;border-color:var(--accent) }
+
+/* Global Search Bar */
+.fms-global-search-wrap { position:relative;flex:1;max-width:400px }
+.fms-global-search { width:100%;padding:.5rem 1rem .5rem 2.4rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.88rem;font-family:inherit;transition:border-color .2s }
+.fms-global-search:focus { outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(46,163,242,.1) }
+.fms-global-search-icon { position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;pointer-events:none }
+.fms-search-results { position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:100;max-height:320px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.3) }
+.fms-search-result-item { padding:.7rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;display:flex;justify-content:space-between;align-items:center;gap:.8rem }
+.fms-search-result-item:last-child { border-bottom:none }
+.fms-search-result-item:hover { background:rgba(46,163,242,.06) }
+.fms-search-result-title { font-size:.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+.fms-search-result-sub { font-size:.74rem;color:var(--muted);margin-top:.15rem }
+.fms-search-empty { padding:1.5rem;text-align:center;color:var(--muted);font-size:.84rem }
 
 /* View containers */
 .fms-view { display:none }
@@ -110,32 +94,36 @@
 .fms-empty { text-align:center;padding:3rem;color:var(--muted);font-size:.88rem }
 .fms-section-hdr { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:.8rem }
 .fms-section-title { font-size:1rem;font-weight:600;color:var(--accent) }
-.back-link {
-  color:var(--accent);background:none;border:none;cursor:pointer;font-size:.85rem;
-  display:inline-flex;align-items:center;gap:.3rem;font-family:inherit;padding:0;
-  margin-bottom:1.2rem;transition:opacity .15s
-}
+.back-link { color:var(--accent);background:none;border:none;cursor:pointer;font-size:.85rem;display:inline-flex;align-items:center;gap:.3rem;font-family:inherit;padding:0;margin-bottom:1.2rem;transition:opacity .15s }
 .back-link:hover { opacity:.75 }
 
+/* ══ ANALYTICS PANEL ════════════════════════════════════════════ */
+.fms-analytics-panel { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1.5rem;border-left:3px solid var(--purple) }
+.fms-chart-bar-row { display:flex;align-items:center;gap:.8rem;margin-bottom:.55rem }
+.fms-chart-bar-label { width:140px;font-size:.76rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0 }
+.fms-chart-bar-track { flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden }
+.fms-chart-bar-fill { height:100%;border-radius:5px;transition:width .6s ease }
+.fms-chart-bar-val { width:50px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--muted);text-align:right;flex-shrink:0 }
+
+/* Company stats inside view */
+.fms-co-analytics { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1.2rem }
+.fms-co-donut-wrap { position:relative;display:inline-flex;align-items:center;justify-content:center }
+.fms-co-donut-label { position:absolute;text-align:center;font-family:'DM Mono',monospace }
+
 /* Overdue company row inside category view */
-.fms-overdue-co-row {
-  background:rgba(248,81,73,.06);
-  border:1px solid rgba(248,81,73,.25);
-  border-left:3px solid var(--red);
-  border-radius:9px;padding:.9rem 1rem;
-  display:flex;justify-content:space-between;align-items:center;gap:.8rem;
-  cursor:pointer;transition:all .15s;margin-bottom:.5rem
-}
+.fms-overdue-co-row { background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.25);border-left:3px solid var(--red);border-radius:9px;padding:.9rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.8rem;cursor:pointer;transition:all .15s;margin-bottom:.5rem }
 .fms-overdue-co-row:hover { background:rgba(248,81,73,.1) }
 
 /* Mini badge */
-.mbadge {
-  display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:12px;
-  font-size:.7rem;font-weight:600;white-space:nowrap
-}
+.mbadge { display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:12px;font-size:.7rem;font-weight:600;white-space:nowrap }
 .mbadge-red { background:rgba(248,81,73,.15);color:#f87171;border:1px solid rgba(248,81,73,.3) }
 .mbadge-yellow { background:rgba(210,153,34,.15);color:#fbbf24;border:1px solid rgba(210,153,34,.3) }
 .mbadge-green { background:rgba(63,185,80,.15);color:#86efac;border:1px solid rgba(63,185,80,.3) }
+.mbadge-blue { background:rgba(46,163,242,.15);color:#60a5fa;border:1px solid rgba(46,163,242,.3) }
+
+/* Export button pulse */
+@keyframes export-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4)} 50%{box-shadow:0 0 0 6px rgba(16,185,129,0)} }
+.btn-export-pulse { animation:export-pulse 2.5s infinite }
 </style>
 
 <div class="fms-wrap">
@@ -147,13 +135,18 @@
       📋 Follow-up Management System
       <span class="badge badge-new" style="font-size:.73rem">FMS</span>
     </h1>
-    <p style="color:var(--muted);font-size:.86rem;margin-top:.3rem">
-      Track every category → every company → every email → reply status
-    </p>
+    <p style="color:var(--muted);font-size:.86rem;margin-top:.3rem">Track every category → every company → every email → reply status</p>
   </div>
-  <div style="display:flex;gap:.7rem">
+  <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center">
+    <!-- Global Search -->
+    <div class="fms-global-search-wrap">
+      <span class="fms-global-search-icon">🔍</span>
+      <input type="text" class="fms-global-search" id="fmsGlobalSearch" placeholder="Search companies, emails…" autocomplete="off" oninput="globalSearch(this.value)" onfocus="showSearchResults()" onblur="setTimeout(hideSearchResults,200)">
+      <div class="fms-search-results" id="fmsSearchResults"></div>
+    </div>
     <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm">← Dashboard</a>
     <button class="btn btn-sm" onclick="loadFMS()">🔄 Refresh</button>
+    <button class="btn btn-sm btn-export-pulse" style="background:var(--green);color:#000" onclick="exportFMSToExcel()">📊 Export Excel</button>
   </div>
 </div>
 
@@ -164,14 +157,14 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
-     VIEW 1: MAIN — Stats + Global Overdue + Category Grid
+     VIEW 1: MAIN — Stats + Analytics + Category Grid (with sidebar)
 ══════════════════════════════════════════════════════════ -->
 <div id="fms-view-main" class="fms-view">
 
   <!-- Stats -->
   <div class="fms-stats" id="fms-stats-row"></div>
 
-  <!-- Global Overdue Banner (across ALL categories) -->
+  <!-- Global Overdue Banner -->
   <div id="fms-overdue-banner" class="fms-overdue-banner" style="display:none">
     <div class="fms-overdue-banner-header">
       <span style="font-size:1.1rem">⚠️</span>
@@ -179,18 +172,83 @@
       <span id="fms-overdue-count" class="mbadge mbadge-red"></span>
       <span style="color:var(--muted);font-size:.8rem">across all categories</span>
     </div>
-    <!-- grouped by category > company -->
     <div id="fms-overdue-list"></div>
   </div>
 
-  <!-- Category Grid -->
-  <div class="card">
-    <div class="fms-section-hdr">
-      <span class="fms-section-title">🗂️ All Categories</span>
-      <input type="text" id="fms-cat-search" class="fms-search" style="width:220px"
-             placeholder="🔍 Search categories…" oninput="filterCatGrid(this.value)">
+  <!-- Analytics Panel -->
+  <div class="fms-analytics-panel" id="fms-analytics-panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:.6rem">
+      <span style="font-size:1rem;font-weight:600;color:var(--purple)">📊 Category Analytics</span>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <span style="color:var(--muted);font-size:.8rem;display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green)"></span>Replied</span>
+        <span style="color:var(--muted);font-size:.8rem;display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--yellow)"></span>Pending</span>
+        <span style="color:var(--muted);font-size:.8rem;display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--red)"></span>Overdue</span>
+      </div>
     </div>
-    <div class="fms-cat-grid" id="fms-cat-grid"></div>
+    <div id="fms-analytics-bars"></div>
+  </div>
+
+  <!-- Layout: Sidebar + Main -->
+  <div class="fms-layout">
+
+    <!-- LEFT: Filter Sidebar -->
+    <div class="fms-sidebar">
+      <div class="fms-sidebar-title">🗂️ Filter by Category</div>
+
+      <!-- Department filter -->
+      <div class="fms-filter-group">
+        <span class="fms-filter-label">Department</span>
+        <select id="fmsDeptFilter" onchange="applyFilters()" style="width:100%;padding:.38rem .7rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;font-family:inherit">
+          <option value="all">All Departments</option>
+          <option value="Client Relations">Client Relations</option>
+          <option value="Audit">Audit</option>
+          <option value="Legal">Legal</option>
+          <option value="Accounts">Accounts</option>
+        </select>
+      </div>
+
+      <!-- Status filter -->
+      <div class="fms-filter-group">
+        <span class="fms-filter-label">Status</span>
+        <label class="fms-filter-check"><input type="checkbox" id="filterOverdue" onchange="applyFilters()" checked> ⚠ Overdue</label>
+        <label class="fms-filter-check"><input type="checkbox" id="filterPending" onchange="applyFilters()" checked> ⏳ Pending</label>
+        <label class="fms-filter-check"><input type="checkbox" id="filterReplied" onchange="applyFilters()" checked> ✓ Replied</label>
+      </div>
+
+      <!-- Category checklist -->
+      <div class="fms-filter-group">
+        <span class="fms-filter-label">Categories</span>
+        <div id="fmsCatChecklist" style="max-height:320px;overflow-y:auto"></div>
+      </div>
+
+      <button class="fms-clear-filters" onclick="clearAllFilters()">✕ Clear All Filters</button>
+
+      <!-- Summary -->
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+        <div style="font-size:.74rem;color:var(--muted)">Showing</div>
+        <div id="fmsSidebarCount" style="font-size:1.3rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">—</div>
+        <div style="font-size:.72rem;color:var(--muted)">categories</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Category Grid -->
+    <div>
+      <div class="card" style="margin:0">
+        <div class="fms-section-hdr">
+          <span class="fms-section-title">🗂️ All Categories</span>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <select id="fmsSortOrder" onchange="applyFilters()" style="padding:.35rem .7rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;font-family:inherit">
+              <option value="total-desc">Sort: Most Emails</option>
+              <option value="overdue-desc">Sort: Overdue First</option>
+              <option value="pct-asc">Sort: Lowest Reply Rate</option>
+              <option value="name-asc">Sort: A→Z</option>
+            </select>
+            <input type="text" id="fms-cat-search" class="fms-search" style="width:180px" placeholder="🔍 Filter categories…" oninput="filterCatGrid(this.value)">
+          </div>
+        </div>
+        <div class="fms-cat-grid" id="fms-cat-grid"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -200,13 +258,12 @@
 <div id="fms-view-category" class="fms-view">
   <button class="back-link" onclick="showMain()">← All Categories</button>
 
-  <!-- Category header -->
   <div style="margin-bottom:1.2rem">
     <h2 id="fms-cat-title" style="font-size:1.3rem;font-weight:700"></h2>
     <div id="fms-cat-meta" style="color:var(--muted);font-size:.83rem;margin-top:.35rem;display:flex;gap:1.2rem;flex-wrap:wrap"></div>
   </div>
 
-  <!-- Overdue companies in this category -->
+  <!-- Category Overdue Section -->
   <div id="fms-cat-overdue-section" style="display:none;margin-bottom:1.4rem">
     <div class="fms-overdue-banner">
       <div class="fms-overdue-banner-header">
@@ -216,6 +273,15 @@
       </div>
       <div id="fms-cat-overdue-list" class="fms-co-list"></div>
     </div>
+  </div>
+
+  <!-- Category Analytics Bars -->
+  <div class="fms-analytics-panel" id="fms-cat-analytics" style="margin-bottom:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <span style="font-size:.9rem;font-weight:600;color:var(--purple)">📊 Company Pending Charges Tracker</span>
+      <span id="fms-cat-analytics-label" style="font-size:.78rem;color:var(--muted)"></span>
+    </div>
+    <div id="fms-cat-analytics-bars"></div>
   </div>
 
   <!-- All companies -->
@@ -229,8 +295,7 @@
           <button class="fms-tab" onclick="setCatTab('pending',this)">⏳ Pending</button>
           <button class="fms-tab" onclick="setCatTab('replied',this)">✓ Replied</button>
         </div>
-        <input type="text" id="fms-co-search" class="fms-search" style="width:190px"
-               placeholder="🔍 Search companies…" oninput="filterCoList(this.value)">
+        <input type="text" id="fms-co-search" class="fms-search" style="width:180px" placeholder="🔍 Search companies…" oninput="filterCoList(this.value)">
       </div>
     </div>
     <div id="fms-co-list" class="fms-co-list"></div>
@@ -251,10 +316,22 @@
     <div id="fms-co-badges" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
   </div>
 
-  <!-- Company stats mini -->
+  <!-- Company Stats -->
   <div class="fms-stats" id="fms-co-stats" style="margin-bottom:1.2rem"></div>
 
-  <!-- Company overdue emails -->
+  <!-- Company Analytics: Pending Charges Tracker -->
+  <div class="fms-analytics-panel" id="fms-co-analytics-panel" style="margin-bottom:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem">
+      <span style="font-size:.9rem;font-weight:600;color:var(--purple)">📊 Pending Charges Analytics</span>
+      <div id="fms-co-analytics-summary" style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem"></div>
+    </div>
+    <!-- Timeline chart -->
+    <div id="fms-co-timeline"></div>
+    <!-- Pending email list with charge tracking -->
+    <div id="fms-co-pending-charges" style="margin-top:1rem"></div>
+  </div>
+
+  <!-- Company Overdue Section -->
   <div id="fms-co-overdue-section" style="display:none;margin-bottom:1.2rem">
     <div class="fms-overdue-banner">
       <div class="fms-overdue-banner-header">
@@ -266,7 +343,7 @@
     </div>
   </div>
 
-  <!-- All emails tab view -->
+  <!-- All emails -->
   <div class="card">
     <div class="fms-section-hdr">
       <span class="fms-section-title">📧 Emails</span>
@@ -286,27 +363,24 @@
 <script>
 'use strict';
 
-// ════════════════════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════ */
 let fmsData      = { companies: [], stats: {} };
 let currentCat   = null;
 let currentCo    = null;
 let catTabFilter = 'all';
+let activeCatFilters = new Set(); // empty = show all
 
-// ════════════════════════════════════════════════════════════
-// UTILITIES
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════════════ */
 function escH(str) {
   const d = document.createElement('div');
   d.textContent = str || '';
   return d.innerHTML;
 }
 
-/**
- * Determine company-level status from its email statuses.
- * Priority: overdue > pending > replied
- */
 function companyStatus(co) {
   const statuses = (co.emails || []).map(e => e.status);
   if (statuses.includes('overdue')) return 'overdue';
@@ -326,9 +400,9 @@ function pctColor(pct) {
   return pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
 }
 
-// ════════════════════════════════════════════════════════════
-// DATA LOAD
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   DATA LOAD
+════════════════════════════════════════════════════════════ */
 function loadFMS() {
   document.getElementById('fms-loading').style.display = 'block';
   ['fms-view-main','fms-view-category','fms-view-company'].forEach(id =>
@@ -349,53 +423,93 @@ function loadFMS() {
     });
 }
 
-// ════════════════════════════════════════════════════════════
-// VIEW 1: MAIN
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   VIEW 1: MAIN
+════════════════════════════════════════════════════════════ */
 function renderMain() {
   const s = fmsData.stats;
+  const pct = s.total_emails > 0 ? Math.round(s.replied / s.total_emails * 100) : 0;
 
-  // Stats row
   document.getElementById('fms-stats-row').innerHTML = `
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--text)">${s.total_companies||0}</div><div class="fms-stat-l">Companies</div></div>
     <div class="fms-stat"><div class="fms-stat-n">${s.total_emails||0}</div><div class="fms-stat-l">Total Emails</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--green)">${s.replied||0}</div><div class="fms-stat-l">Replied</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--yellow)">${s.pending||0}</div><div class="fms-stat-l">Pending</div></div>
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--red)">${s.overdue||0}</div><div class="fms-stat-l">Overdue >3d</div></div>
-    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--accent)">${s.total_emails>0?Math.round(s.replied/s.total_emails*100):0}%</div><div class="fms-stat-l">Reply Rate</div></div>
+    <div class="fms-stat"><div class="fms-stat-n" style="color:var(--accent)">${pct}%</div><div class="fms-stat-l">Reply Rate</div></div>
   `;
 
   renderGlobalOverdue();
+  buildCatChecklist();
+  renderAnalyticsBars();
   renderCatGrid();
   document.getElementById('fms-view-main').classList.add('active');
+  document.getElementById('fms-analytics-panel').style.display = 'block';
 }
 
-/**
- * Global overdue section: groups overdue emails by Category > Company
- */
+/* ── Category Analytics Bars ─────────────────────────────── */
+function renderAnalyticsBars() {
+  const catMap = buildCatMap(fmsData.companies);
+  const sorted = Object.values(catMap).sort((a,b) => b.total - a.total).slice(0, 10);
+  const maxTotal = Math.max(...sorted.map(c => c.total), 1);
+  const el = document.getElementById('fms-analytics-bars');
+  if (!sorted.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem">No data</div>'; return; }
+
+  el.innerHTML = sorted.map(c => {
+    const pendingWidth = Math.round((c.pending / maxTotal) * 100);
+    const repliedWidth = Math.round((c.replied / maxTotal) * 100);
+    const overdueWidth = Math.round((c.overdue / maxTotal) * 100);
+    return `
+      <div class="fms-chart-bar-row" style="cursor:pointer" onclick="openCategory('${escH(c.cat)}')">
+        <div class="fms-chart-bar-label" title="${escH(c.cat)}">${escH(c.cat)}</div>
+        <div class="fms-chart-bar-track">
+          <div style="height:100%;display:flex">
+            <div style="width:${repliedWidth}%;background:var(--green);border-radius:5px 0 0 5px;transition:width .6s"></div>
+            <div style="width:${pendingWidth}%;background:var(--yellow);transition:width .6s"></div>
+            <div style="width:${overdueWidth}%;background:var(--red);border-radius:0 5px 5px 0;transition:width .6s"></div>
+          </div>
+        </div>
+        <div class="fms-chart-bar-val">${c.total}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ── Build category map from company list ────────────────── */
+function buildCatMap(companies) {
+  const catMap = {};
+  companies.forEach(co => {
+    const cat = co.cat || 'General Inquiry';
+    if (!catMap[cat]) catMap[cat] = { cat, dept: co.dept, total: 0, replied: 0, pending: 0, overdue: 0, totalCo: 0 };
+    catMap[cat].totalCo++;
+    co.emails.forEach(e => {
+      catMap[cat].total++;
+      catMap[cat][e.status]++;
+    });
+  });
+  return catMap;
+}
+
+/* ── Global Overdue Section ─────────────────────────────── */
 function renderGlobalOverdue() {
-  const banner   = document.getElementById('fms-overdue-banner');
-  const listEl   = document.getElementById('fms-overdue-list');
-  const countEl  = document.getElementById('fms-overdue-count');
+  const banner  = document.getElementById('fms-overdue-banner');
+  const listEl  = document.getElementById('fms-overdue-list');
+  const countEl = document.getElementById('fms-overdue-count');
+  const overdue = fmsData.companies.filter(c => companyStatus(c) === 'overdue');
 
-  // Collect all overdue companies
-  const overdueCompanies = fmsData.companies.filter(c => companyStatus(c) === 'overdue');
-  if (!overdueCompanies.length) { banner.style.display = 'none'; return; }
-
+  if (!overdue.length) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
-  countEl.textContent  = overdueCompanies.length + ' companies';
+  countEl.textContent  = overdue.length + ' companies';
   listEl.innerHTML     = '';
 
-  // Group by category
   const catGroups = {};
-  overdueCompanies.forEach(co => {
+  overdue.forEach(co => {
     const cat = co.cat || 'General Inquiry';
     if (!catGroups[cat]) catGroups[cat] = [];
     catGroups[cat].push(co);
   });
 
   Object.entries(catGroups).forEach(([cat, companies]) => {
-    // Category header
     const catHdr = document.createElement('div');
     catHdr.style.cssText = 'font-size:.78rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin:.8rem 0 .4rem';
     catHdr.textContent = '📂 ' + cat;
@@ -428,40 +542,110 @@ function renderGlobalOverdue() {
   });
 }
 
-/**
- * Category grid: one card per category, shows company count + email stats
- */
+/* ════════════════════════════════════════════════════════════
+   SIDEBAR: Category Checklist
+════════════════════════════════════════════════════════════ */
+function buildCatChecklist() {
+  const catMap  = buildCatMap(fmsData.companies);
+  const sorted  = Object.values(catMap).sort((a,b) => b.total - a.total);
+  const el      = document.getElementById('fmsCatChecklist');
+  el.innerHTML  = '';
+  activeCatFilters = new Set(sorted.map(c => c.cat)); // all active by default
+
+  sorted.forEach(c => {
+    const label = document.createElement('label');
+    label.className = 'fms-filter-check' + (c.overdue > 0 ? ' has-overdue' : '');
+    label.innerHTML = `
+      <input type="checkbox" data-cat="${escH(c.cat)}" checked onchange="toggleCatFilter('${escH(c.cat)}',this.checked)">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(c.cat)}">${escH(c.cat)}</span>
+      <span class="fms-cat-count">${c.total}</span>
+    `;
+    el.appendChild(label);
+  });
+
+  updateSidebarCount();
+}
+
+function toggleCatFilter(cat, checked) {
+  if (checked) activeCatFilters.add(cat);
+  else activeCatFilters.delete(cat);
+  applyFilters();
+}
+
+function applyFilters() {
+  const dept       = document.getElementById('fmsDeptFilter').value;
+  const showOver   = document.getElementById('filterOverdue').checked;
+  const showPend   = document.getElementById('filterPending').checked;
+  const showRepl   = document.getElementById('filterReplied').checked;
+  const sortOrder  = document.getElementById('fmsSortOrder').value;
+
+  const catMap  = buildCatMap(fmsData.companies);
+  let cats      = Object.values(catMap);
+
+  // Department filter
+  if (dept !== 'all') cats = cats.filter(c => c.dept === dept);
+  // Category checklist filter
+  cats = cats.filter(c => activeCatFilters.has(c.cat));
+  // Status filter: only show categories that have at least one email of shown status
+  cats = cats.filter(c => {
+    if (showOver && c.overdue > 0) return true;
+    if (showPend && c.pending > 0) return true;
+    if (showRepl && c.replied > 0) return true;
+    return false;
+  });
+
+  // Sort
+  if (sortOrder === 'total-desc')  cats.sort((a,b) => b.total - a.total);
+  else if (sortOrder === 'overdue-desc') cats.sort((a,b) => b.overdue - a.overdue);
+  else if (sortOrder === 'pct-asc') cats.sort((a,b) => (a.replied/Math.max(a.total,1)) - (b.replied/Math.max(b.total,1)));
+  else if (sortOrder === 'name-asc') cats.sort((a,b) => a.cat.localeCompare(b.cat));
+
+  renderCatGridFromData(cats);
+  updateSidebarCount(cats.length);
+}
+
+function clearAllFilters() {
+  document.getElementById('fmsDeptFilter').value = 'all';
+  document.getElementById('filterOverdue').checked = true;
+  document.getElementById('filterPending').checked = true;
+  document.getElementById('filterReplied').checked = true;
+  document.getElementById('fmsSortOrder').value = 'total-desc';
+  document.querySelectorAll('#fmsCatChecklist input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+  const catMap = buildCatMap(fmsData.companies);
+  activeCatFilters = new Set(Object.keys(catMap));
+  buildCatChecklist();
+  renderCatGrid();
+}
+
+function updateSidebarCount(count) {
+  const total = count !== undefined ? count : Object.keys(buildCatMap(fmsData.companies)).length;
+  document.getElementById('fmsSidebarCount').textContent = total;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CATEGORY GRID RENDERING
+════════════════════════════════════════════════════════════ */
 function renderCatGrid() {
+  const catMap = buildCatMap(fmsData.companies);
+  const sorted = Object.values(catMap).sort((a,b) => b.total - a.total);
+  renderCatGridFromData(sorted);
+  updateSidebarCount(sorted.length);
+}
+
+function renderCatGridFromData(cats) {
   const grid = document.getElementById('fms-cat-grid');
   grid.innerHTML = '';
 
-  // Build category map
-  const catMap = {};
-  fmsData.companies.forEach(co => {
-    const cat = co.cat || 'General Inquiry';
-    if (!catMap[cat]) {
-      catMap[cat] = {
-        cat, dept: co.dept,
-        totalCo: 0, total: 0, replied: 0, pending: 0, overdue: 0
-      };
-    }
-    catMap[cat].totalCo++;
-    co.emails.forEach(e => {
-      catMap[cat].total++;
-      catMap[cat][e.status]++;
-    });
-  });
-
-  const sorted = Object.values(catMap).sort((a,b) => b.total - a.total);
-  if (!sorted.length) {
-    grid.innerHTML = '<div class="fms-empty">No email categories found</div>';
+  if (!cats.length) {
+    grid.innerHTML = '<div class="fms-empty" style="grid-column:1/-1">No categories match current filters</div>';
     return;
   }
 
-  sorted.forEach(c => {
-    const pct      = c.total > 0 ? Math.round(c.replied / c.total * 100) : 0;
-    const barColor = pctColor(pct);
-    const card     = document.createElement('div');
+  const maxTotal = Math.max(...cats.map(c => c.total), 1);
+
+  cats.forEach(c => {
+    const pct  = c.total > 0 ? Math.round(c.replied / c.total * 100) : 0;
+    const card = document.createElement('div');
     card.className = 'fms-cat-card ' + deptClass(c.dept) + (c.overdue > 0 ? ' has-overdue' : '');
     card.dataset.cat = c.cat;
     card.innerHTML = `
@@ -477,7 +661,7 @@ function renderCatGrid() {
         <span style="color:var(--yellow)">⏳ ${c.pending}</span>
         ${c.overdue ? `<span style="color:var(--red);font-weight:700">⚠ ${c.overdue} overdue</span>` : ''}
       </div>
-      <div class="fms-prog"><div class="fms-prog-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="fms-prog"><div class="fms-prog-fill" style="width:${pct}%;background:${pctColor(pct)}"></div></div>
       <div style="font-size:.69rem;color:var(--muted);margin-top:.3rem;display:flex;justify-content:space-between">
         <span>${pct}% replied</span>
         <span>${c.totalCo} co.</span>
@@ -494,9 +678,79 @@ function filterCatGrid(term) {
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// VIEW 2: CATEGORY
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   GLOBAL SEARCH
+════════════════════════════════════════════════════════════ */
+function globalSearch(term) {
+  const container = document.getElementById('fmsSearchResults');
+  if (!term.trim()) { container.style.display = 'none'; return; }
+
+  const t = term.toLowerCase();
+  const results = [];
+
+  // Search companies
+  fmsData.companies.forEach(co => {
+    if (co.name.toLowerCase().includes(t) || co.cat.toLowerCase().includes(t)) {
+      const st = companyStatus(co);
+      const pending = co.emails.filter(e => !e.replied).length;
+      results.push({ type: 'company', name: co.name, cat: co.cat, status: st, pending, co });
+    }
+    // Search email subjects
+    co.emails.forEach(em => {
+      if (em.subject.toLowerCase().includes(t) || co.name.toLowerCase().includes(t)) {
+        if (!results.find(r => r.type === 'email' && r.id === em.id)) {
+          results.push({ type: 'email', id: em.id, subject: em.subject, company: co.name, cat: co.cat, status: em.status, co, em });
+        }
+      }
+    });
+  });
+
+  if (!results.length) {
+    container.innerHTML = `<div class="fms-search-empty">No results for "${escH(term)}"</div>`;
+    container.style.display = 'block';
+    return;
+  }
+
+  const shown = results.slice(0, 12);
+  container.innerHTML = shown.map(r => {
+    if (r.type === 'company') {
+      const badge = r.status === 'overdue' ? '<span class="mbadge mbadge-red" style="font-size:.67rem">Overdue</span>' : r.status === 'pending' ? '<span class="mbadge mbadge-yellow" style="font-size:.67rem">Pending</span>' : '<span class="mbadge mbadge-green" style="font-size:.67rem">Replied</span>';
+      return `<div class="fms-search-result-item" onclick="openCompany('${escH(r.name)}','${escH(r.cat)}');hideSearchResults()">
+        <div style="flex:1;min-width:0">
+          <div class="fms-search-result-title">🏢 ${escH(r.name)}</div>
+          <div class="fms-search-result-sub">${escH(r.cat)} · ${r.co.emails.length} emails</div>
+        </div>
+        ${badge}
+      </div>`;
+    } else {
+      const badge = r.status === 'overdue' ? '<span class="mbadge mbadge-red" style="font-size:.67rem">Overdue</span>' : r.status === 'pending' ? '<span class="mbadge mbadge-yellow" style="font-size:.67rem">Pending</span>' : '<span class="mbadge mbadge-green" style="font-size:.67rem">Replied</span>';
+      return `<div class="fms-search-result-item" onclick="document.getElementById('fmsGlobalSearch').value='';hideSearchResults();openCompany('${escH(r.co.name)}','${escH(r.co.cat)}')">
+        <div style="flex:1;min-width:0">
+          <div class="fms-search-result-title">📧 ${escH(r.subject.substring(0,50))}${r.subject.length>50?'…':''}</div>
+          <div class="fms-search-result-sub">🏢 ${escH(r.company)} · ${escH(r.cat)}</div>
+        </div>
+        ${badge}
+      </div>`;
+    }
+  }).join('');
+
+  if (results.length > 12) {
+    container.innerHTML += `<div style="padding:.5rem 1rem;font-size:.75rem;color:var(--muted);text-align:center">Showing 12 of ${results.length} results</div>`;
+  }
+  container.style.display = 'block';
+}
+
+function showSearchResults() {
+  const val = document.getElementById('fmsGlobalSearch').value;
+  if (val.trim()) globalSearch(val);
+}
+function hideSearchResults() {
+  document.getElementById('fmsSearchResults').style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════════════
+   VIEW 2: CATEGORY
+════════════════════════════════════════════════════════════ */
 function openCategory(cat) {
   currentCat   = cat;
   catTabFilter = 'all';
@@ -505,16 +759,13 @@ function openCategory(cat) {
   document.getElementById('fms-view-category').classList.add('active');
   document.getElementById('fms-cat-title').textContent = '🗂️ ' + cat;
   document.getElementById('fms-co-search').value = '';
-
-  // Reset tabs
   document.querySelectorAll('#fms-cat-tabs .fms-tab').forEach((t,i) => t.classList.toggle('active', i===0));
 
-  // Category meta stats
   const companies = fmsData.companies.filter(c => c.cat === cat);
-  const total     = companies.reduce((a,c) => a + c.emails.length, 0);
-  const replied   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='replied').length, 0);
-  const pending   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='pending').length, 0);
-  const overdue   = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='overdue').length, 0);
+  const total   = companies.reduce((a,c) => a + c.emails.length, 0);
+  const replied = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='replied').length, 0);
+  const pending = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='pending').length, 0);
+  const overdue = companies.reduce((a,c) => a + c.emails.filter(e => e.status==='overdue').length, 0);
 
   document.getElementById('fms-cat-meta').innerHTML = `
     <span><strong style="color:var(--text)">${companies.length}</strong> companies</span>
@@ -524,18 +775,52 @@ function openCategory(cat) {
     ${overdue ? `<span style="color:var(--red);font-weight:600">⚠ ${overdue} overdue</span>` : ''}
   `;
 
-  // Category-level overdue section
   renderCatOverdue(companies);
-
-  // Company list
+  renderCatAnalyticsBars(companies);
   renderCoList(companies, 'all');
 }
 
+/* ── Category-level analytics: pending charges per company ── */
+function renderCatAnalyticsBars(companies) {
+  const el    = document.getElementById('fms-cat-analytics-bars');
+  const label = document.getElementById('fms-cat-analytics-label');
+  const shown = companies.filter(c => c.emails.some(e => !e.replied)).slice(0, 10);
+  const maxPending = Math.max(...shown.map(c => c.emails.filter(e => !e.replied).length), 1);
+
+  label.textContent = `${shown.length} companies with pending emails`;
+
+  if (!shown.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem">✅ All companies replied</div>';
+    return;
+  }
+
+  shown.sort((a,b) => b.emails.filter(e => !e.replied).length - a.emails.filter(e => !e.replied).length);
+
+  el.innerHTML = shown.map(co => {
+    const pending = co.emails.filter(e => e.status === 'pending').length;
+    const overdue = co.emails.filter(e => e.status === 'overdue').length;
+    const pWidth  = Math.round((pending / maxPending) * 100);
+    const oWidth  = Math.round((overdue / maxPending) * 100);
+    return `
+      <div class="fms-chart-bar-row" style="cursor:pointer" onclick="openCompany('${escH(co.name)}','${escH(co.cat)}')">
+        <div class="fms-chart-bar-label" title="${escH(co.name)}">${escH(co.name)}</div>
+        <div class="fms-chart-bar-track">
+          <div style="height:100%;display:flex">
+            <div style="width:${pWidth}%;background:var(--yellow);border-radius:5px 0 0 5px;transition:width .6s"></div>
+            <div style="width:${oWidth}%;background:var(--red);border-radius:0 5px 5px 0;transition:width .6s"></div>
+          </div>
+        </div>
+        <div class="fms-chart-bar-val" style="color:${overdue>0?'var(--red)':'var(--yellow)'}">${pending+overdue}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderCatOverdue(companies) {
-  const section  = document.getElementById('fms-cat-overdue-section');
-  const listEl   = document.getElementById('fms-cat-overdue-list');
-  const countEl  = document.getElementById('fms-cat-overdue-count');
-  const overdue  = companies.filter(c => companyStatus(c) === 'overdue');
+  const section = document.getElementById('fms-cat-overdue-section');
+  const listEl  = document.getElementById('fms-cat-overdue-list');
+  const countEl = document.getElementById('fms-cat-overdue-count');
+  const overdue = companies.filter(c => companyStatus(c) === 'overdue');
 
   if (!overdue.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
@@ -571,12 +856,8 @@ function renderCoList(companies, filter) {
   const list = document.getElementById('fms-co-list');
   list.innerHTML = '';
 
-  if (!shown.length) {
-    list.innerHTML = '<div class="fms-empty">No companies for this filter</div>';
-    return;
-  }
+  if (!shown.length) { list.innerHTML = '<div class="fms-empty">No companies for this filter</div>'; return; }
 
-  // Sort: overdue first, then pending, then replied
   const order = { overdue: 0, pending: 1, replied: 2 };
   shown.sort((a,b) => order[companyStatus(a)] - order[companyStatus(b)]).forEach(co => {
     const st      = companyStatus(co);
@@ -623,11 +904,10 @@ function setCatTab(filter, el) {
   renderCoList(companies, filter);
 }
 
-// ════════════════════════════════════════════════════════════
-// VIEW 3: COMPANY
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   VIEW 3: COMPANY
+════════════════════════════════════════════════════════════ */
 function openCompany(name, cat) {
-  // Find company object
   currentCo = fmsData.companies.find(c => c.name === name && c.cat === cat)
            || fmsData.companies.find(c => c.name === name);
   if (!currentCo) return;
@@ -635,13 +915,11 @@ function openCompany(name, cat) {
   ['fms-view-main','fms-view-category'].forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById('fms-view-company').classList.add('active');
 
-  // Back button
   document.getElementById('fms-co-back').onclick = () => {
     if (currentCat) openCategory(currentCat);
     else showMain();
   };
 
-  // Header
   document.getElementById('fms-co-title').textContent = '🏢 ' + currentCo.name;
   document.getElementById('fms-co-meta').textContent  = (currentCo.cat||'—') + ' · ' + (currentCo.dept||'Client Relations');
 
@@ -666,19 +944,107 @@ function openCompany(name, cat) {
     <div class="fms-stat"><div class="fms-stat-n" style="color:var(--accent)">${pct}%</div><div class="fms-stat-l">Reply Rate</div></div>
   `;
 
-  // Company-level overdue email section
+  renderCoAnalytics(emails);
   renderCoOverdue(emails);
-
-  // Reset tabs
   document.querySelectorAll('#fms-email-tabs .fms-tab').forEach((t,i) => t.classList.toggle('active', i===0));
   renderEmailList(emails, 'all');
 }
 
+/* ── Company Analytics: Pending Charges Tracker ─────────── */
+function renderCoAnalytics(emails) {
+  const panel   = document.getElementById('fms-co-analytics-panel');
+  const summary = document.getElementById('fms-co-analytics-summary');
+  const pending = emails.filter(e => !e.replied);
+  const overdue = emails.filter(e => e.status === 'overdue');
+
+  panel.style.display = 'block';
+
+  summary.innerHTML = `
+    <span style="color:var(--yellow);font-weight:600">${pending.length} pending emails</span>
+    <span style="color:var(--red);font-weight:600">${overdue.length} overdue</span>
+    <span style="color:var(--muted)">Oldest: ${pending.length ? Math.max(...pending.map(e=>e.days_old)) + ' days' : '—'}</span>
+  `;
+
+  // Timeline: bar chart of pending emails by day
+  renderCoTimeline(emails);
+
+  // Pending charges list
+  const chargesEl = document.getElementById('fms-co-pending-charges');
+  if (!pending.length) {
+    chargesEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--green);font-size:.85rem">✅ All emails have been replied to!</div>';
+    return;
+  }
+
+  chargesEl.innerHTML = `
+    <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">
+      Pending Emails Requiring Action
+    </div>
+    ${pending.sort((a,b) => b.days_old - a.days_old).map(em => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:7px;margin-bottom:.4rem;border-left:3px solid ${em.status==='overdue'?'var(--red)':'var(--yellow)'}">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(em.subject)}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">
+            Received: ${escH(em.date)} · 
+            <span style="color:${em.status==='overdue'?'var(--red)':'var(--yellow)'};font-weight:600">${em.days_old} day${em.days_old===1?'':'s'} waiting</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center;flex-shrink:0;margin-left:.8rem">
+          ${em.status==='overdue' ? '<span class="mbadge mbadge-red">⚠ Overdue</span>' : '<span class="mbadge mbadge-yellow">⏳ Pending</span>'}
+          <a href="/view_email/${em.id}" class="btn btn-sm" style="${em.status==='overdue'?'background:var(--red);color:#fff':''}font-size:.73rem">Reply →</a>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+/* ── Timeline: email activity by status ─────────────────── */
+function renderCoTimeline(emails) {
+  const el = document.getElementById('fms-co-timeline');
+  if (!emails.length) { el.innerHTML = ''; return; }
+
+  // Group by date
+  const byDate = {};
+  emails.forEach(em => {
+    const date = (em.date || '').split(' ')[0];
+    if (!date) return;
+    if (!byDate[date]) byDate[date] = { replied: 0, pending: 0, overdue: 0 };
+    byDate[date][em.status]++;
+  });
+
+  const dates   = Object.keys(byDate).sort().slice(-14); // last 14 days
+  if (!dates.length) { el.innerHTML = ''; return; }
+
+  const maxVal  = Math.max(...dates.map(d => byDate[d].replied + byDate[d].pending + byDate[d].overdue), 1);
+
+  el.innerHTML = `
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Email Activity Timeline (last ${dates.length} days)</div>
+    <div style="display:flex;align-items:flex-end;gap:3px;height:60px;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:.5rem">
+      ${dates.map(d => {
+        const data    = byDate[d];
+        const total   = data.replied + data.pending + data.overdue;
+        const height  = Math.round((total / maxVal) * 54);
+        const rH      = Math.round((data.replied / Math.max(total,1)) * height);
+        const pHcalc  = Math.round((data.pending / Math.max(total,1)) * height);
+        const oH      = height - rH - pHcalc;
+        return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;cursor:default" title="${d}: ${data.replied} replied, ${data.pending} pending, ${data.overdue} overdue">
+          ${data.overdue  ? `<div style="background:var(--red);height:${oH}px;min-height:${data.overdue?2:0}px;border-radius:2px 2px 0 0"></div>` : ''}
+          ${data.pending  ? `<div style="background:var(--yellow);height:${pHcalc}px;min-height:${data.pending?2:0}px"></div>` : ''}
+          ${data.replied  ? `<div style="background:var(--green);height:${rH}px;min-height:${data.replied?2:0}px;border-radius:${!data.pending&&!data.overdue?'2px 2px':0} 0 0"></div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:.67rem;color:var(--muted)">
+      <span>${dates[0]}</span>
+      <span>${dates[dates.length-1]}</span>
+    </div>
+  `;
+}
+
 function renderCoOverdue(emails) {
-  const section  = document.getElementById('fms-co-overdue-section');
-  const listEl   = document.getElementById('fms-co-overdue-list');
-  const countEl  = document.getElementById('fms-co-overdue-count');
-  const overdue  = emails.filter(e => e.status === 'overdue');
+  const section = document.getElementById('fms-co-overdue-section');
+  const listEl  = document.getElementById('fms-co-overdue-list');
+  const countEl = document.getElementById('fms-co-overdue-count');
+  const overdue = emails.filter(e => e.status === 'overdue');
 
   if (!overdue.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
@@ -711,10 +1077,7 @@ function renderEmailList(emails, filter) {
   const list = document.getElementById('fms-email-list');
   list.innerHTML = '';
 
-  if (!shown.length) {
-    list.innerHTML = '<div class="fms-empty">No emails for this filter</div>';
-    return;
-  }
+  if (!shown.length) { list.innerHTML = '<div class="fms-empty">No emails for this filter</div>'; return; }
 
   shown.sort((a,b) => b.date_ts - a.date_ts).forEach(em => {
     const st = em.status;
@@ -749,9 +1112,72 @@ function setEmailTab(filter, el) {
   renderEmailList(currentCo.emails || [], filter);
 }
 
-// ════════════════════════════════════════════════════════════
-// NAVIGATION
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   EXCEL EXPORT
+════════════════════════════════════════════════════════════ */
+function exportFMSToExcel() {
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+
+  try {
+    // Build CSV data
+    const rows = [['Company','Category','Department','Subject','Date','Status','Days Without Reply','Reply Date']];
+    fmsData.companies.forEach(co => {
+      co.emails.forEach(em => {
+        rows.push([
+          co.name,
+          co.cat || '',
+          co.dept || '',
+          em.subject || '',
+          em.date || '',
+          em.status === 'replied' ? 'Replied' : em.status === 'overdue' ? 'Overdue (3+ days)' : 'Pending',
+          em.days_old || 0,
+          em.replied_at || ''
+        ]);
+      });
+    });
+
+    // Convert to CSV string
+    const csvContent = rows.map(row =>
+      row.map(cell => {
+        const str = String(cell).replace(/"/g, '""');
+        return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str;
+      }).join(',')
+    ).join('\n');
+
+    // Download CSV (works without external library)
+    const BOM = '\uFEFF'; // BOM for Excel UTF-8 compatibility
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href  = url;
+    const now  = new Date();
+    const ts   = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    link.download = `FMS_Export_${ts}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success flash
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;top:80px;right:20px;background:rgba(63,185,80,.15);border:1px solid var(--green);border-radius:8px;padding:.7rem 1.2rem;color:#86efac;font-size:.88rem;z-index:9999;animation:fadeIn .3s ease';
+    flash.textContent = `✅ Exported ${rows.length - 1} records`;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 3000);
+
+  } catch(err) {
+    alert('Export failed: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = orig;
+}
+
+/* ════════════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════════ */
 function showMain() {
   currentCat = null;
   currentCo  = null;
@@ -759,9 +1185,9 @@ function showMain() {
   document.getElementById('fms-view-main').classList.add('active');
 }
 
-// ════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', loadFMS);
 </script>
 {% endblock %}
