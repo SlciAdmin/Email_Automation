@@ -2,6 +2,10 @@
 # FILE: app.py - SLCI Email Router (FIXED & PRODUCTION-READY)
 # ═══════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════
+# FILE: app.py - SLCI Email Router (PRODUCTION-READY)
+# ═══════════════════════════════════════════════════════════════
+
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, Response, stream_with_context
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from models import db, User, Email, EmailReply, DEPARTMENTS
@@ -9,31 +13,51 @@ from ai_engine import classify_email, get_department_for_category
 from mail_engine import send_department_reply
 from imap_fetcher import fetch_emails_periodically
 from datetime import datetime, timedelta, timezone, date as date_type
-import threading, os, queue, time as time_module, json, csv, io
+import threading, os, queue, time as time_module, json, csv, io, secrets
 from dotenv import load_dotenv
 from flask import send_file, abort
 import io
 
+# Load .env for LOCAL development only
 load_dotenv()
 
 app = Flask(__name__)
-# ===== DATABASE CONFIG - PRODUCTION READY =====
-# ===== DATABASE CONFIG - PRODUCTION READY =====
-# ===== DATABASE CONFIG - PRODUCTION READY =====
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://slci_db_user:gnus7lM6HvwTt2p2Msb5DI9W7YEtQfts@dpg-d6f94dcr85hc738infc0-a.oregon-postgres.render.com:5432/slci_db?sslmode=require"
-)
+
+# ════════════════════════════════════════════════════════
+# 🔐 SECRET_KEY CONFIG (CRITICAL FIX FOR RENDER)
+# ════════════════════════════════════════════════════════
+# Priority: 1. Render env var → 2. .env file → 3. Auto-generate (dev only)
+secret_key = os.getenv("SECRET_KEY")
+if not secret_key:
+    # Fallback for local dev - NEVER use this in production!
+    secret_key = os.getenv("FLASK_SECRET_KEY")  # Alternate name
+if not secret_key and not os.getenv("RENDER"):
+    # Auto-generate for local dev only
+    secret_key = secrets.token_hex(32)
+    print(f"⚠  Using auto-generated SECRET_KEY (local dev only): {secret_key[:16]}...")
+elif not secret_key:
+    # Running on Render without SECRET_KEY - this will cause login to fail
+    raise RuntimeError("❌ SECRET_KEY not set! Add it to Render Environment Variables.")
+
+app.config["SECRET_KEY"] = secret_key
+
+# ════════════════════════════════════════════════════════
+# DATABASE CONFIG - PRODUCTION READY
+# ════════════════════════════════════════════════════════
+db_url = os.getenv("DATABASE_URL")
+if not db_url:
+    # Fallback for local dev
+    db_url = "postgresql://postgres:SLCI123@localhost:5432/email_automation"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
     "pool_recycle": 300,
-    "connect_args": {
-        "sslmode": "require"
-    }
+    "connect_args": {"sslmode": "require"}
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-
+# Initialize extensions
 db.init_app(app)
 login_manager = LoginManager()
 login_manager.login_view = "login"
@@ -42,7 +66,6 @@ login_manager.init_app(app)
 # ✅ TWO queues: one for replies, one for NEW incoming emails
 reply_queue = queue.Queue()
 new_email_queue = queue.Queue()
-
 
 @login_manager.user_loader
 def load_user(user_id):
