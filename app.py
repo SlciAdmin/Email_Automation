@@ -909,6 +909,9 @@ def get_reply_history(email_id):
 # INITIALIZATION
 # ─────────────────────────────────────────────
 
+# ─────────────────────────────────────────────
+# INITIALIZATION
+# ─────────────────────────────────────────────
 def _create_default_users():
     """Create default admin/department users"""
     defaults = [
@@ -918,7 +921,6 @@ def _create_default_users():
         ("legal@slci.in",             "LEGAL@123",    "user",  "Legal"),
         ("accounts@sksharma.in",      "ACCOUNTS@123", "user",  "Accounts"),
     ]
-
     for email_addr, password, role, dept in defaults:
         if not User.query.filter_by(email=email_addr).first():
             db.session.add(User(
@@ -928,39 +930,41 @@ def _create_default_users():
                 department=dept
             ))
             print(f"  ✓ Created: {role} - {email_addr}")
-
     db.session.commit()
 
+def _init_db():
+    """Initialize database tables"""
+    with app.app_context():
+        db.create_all()
+        _create_default_users()
+
+# Initialize DB on startup
+_init_db()
 
 def _start_background_threads():
-    """Start background tasks"""
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+    """Start background tasks ONLY in production"""
+    # Only start in production (not in debug mode)
+    if not app.debug:
         import ai_engine, mail_engine
-
         threading.Thread(
             target=fetch_emails_periodically,
             args=(app, db, Email, User, ai_engine, mail_engine),
             daemon=True,
             name="email_fetcher"
         ).start()
-
         threading.Thread(
             target=_reminder_loop,
             daemon=True,
             name="tracker"
         ).start()
+        print("✅ Background threads started (Production Mode)")
 
-        print("✅ Background threads started (Real-Time Enabled)")
-
+# Start background threads
+_start_background_threads()
 
 # ─────────────────────────────────────────────
 # MAIN ENTRY POINT
 # ─────────────────────────────────────────────
-
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        _create_default_users()
-        _start_background_threads()
-
-    app.run(debug=True, host="0.0.0.0", port=5000, threaded=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port, threaded=True)
