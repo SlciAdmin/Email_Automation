@@ -1,13 +1,18 @@
-flask==2.3.3
-flask-login==0.6.2
-flask-sqlalchemy==3.0.5
+# ===== CORE FLASK =====
+Flask==3.0.0
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.1
+
+# ===== DATABASE =====
 psycopg2-binary==2.9.9
-transformers==4.35.2
-torch==2.1.1
-python-dotenv==1.0.0
-imap-tools==1.0.0
-email-validator==2.1.0
-werkzeug==2.3.7
-openpyxl==3.1.2
-reportlab==4.0.4
+
+# ===== UTILITIES =====
+python-dotenv==1.0.1
 gunicorn==21.2.0
+imaplib2==3.6
+email-validator==2.1.0
+
+# ===== NOTE: torch/transformers REMOVED =====
+# Your ai_engine.py uses keyword matching only - NO ML needed!
+# This saves 4GB+ build time and avoids Python 3.14 conflicts

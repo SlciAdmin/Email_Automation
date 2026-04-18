@@ -17,8 +17,15 @@ import io
 load_dotenv()
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-key-change-in-prod")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://postgres:SLCI123@localhost:5432/email_automation")
+# ===== DATABASE CONFIG - PRODUCTION READY =====
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://slci_db_user:gnus7lM6HvwTt2p2Msb5DI9W7YEtQfts@dpg-d6f94dcr85hc738infc0-a.oregon-postgres.render.com:5432/slci_db?sslmode=require"
+)
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,      # Auto-reconnect on disconnect
+    "pool_recycle": 300,         # Recycle connections every 5 min
+}
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
