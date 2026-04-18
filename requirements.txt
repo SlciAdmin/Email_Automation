@@ -5,11 +5,11 @@ Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.1
 
 # ===== DATABASE (Render-compatible) =====
-# Use psycopg2 (source) instead of psycopg2-binary for Python 3.12+
-psycopg2==2.9.9
+# Use psycopg2-binary which has pre-built wheels for ALL Python versions
+psycopg2-binary==2.9.9
 
 # ===== UTILITIES =====
 python-dotenv==1.0.1
 gunicorn==21.2.0
 imaplib2==3.6
-email-validator==2.1.0
+email-validator==2.1.0.post1
