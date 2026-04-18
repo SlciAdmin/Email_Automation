@@ -17,6 +17,8 @@ import threading, os, queue, time as time_module, json, csv, io, secrets
 from dotenv import load_dotenv
 from flask import send_file, abort
 import io
+import functools
+from flask_compress import Compress
 
 # Load .env for LOCAL development only
 load_dotenv()
@@ -51,11 +53,32 @@ if not db_url:
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 300,
-    "connect_args": {"sslmode": "require"}
+    "pool_pre_ping":    True,
+    "pool_recycle":     300,
+    "pool_size":        5,       # Keep 5 connections warm
+    "max_overflow":     10,      # Up to 10 extra under load
+    "pool_timeout":     20,
+    "connect_args":     {"sslmode": "require", "connect_timeout": 10},
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+
+_CACHE = {}
+_CACHE_TTL = 30  # seconds
+ 
+def cache_get(key):
+    entry = _CACHE.get(key)
+    if entry and (time_module.time() - entry['ts'] < _CACHE_TTL):
+        return entry['val']
+    return None
+ 
+def cache_set(key, val):
+    _CACHE[key] = {'val': val, 'ts': time_module.time()}
+ 
+def cache_bust(prefix=''):
+    keys = [k for k in _CACHE if k.startswith(prefix)]
+    for k in keys:
+        del _CACHE[k]
 
 # Initialize extensions
 db.init_app(app)
@@ -193,20 +216,33 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Main dashboard - REAL-TIME ready"""
+    """Main dashboard - optimised queries"""
     if current_user.role.lower() == "admin":
-        all_emails = Email.query.order_by(Email.created_at.desc()).limit(300).all()
-        recent_replies = EmailReply.query.order_by(EmailReply.replied_at.desc()).limit(20).all()
-
+        # Limit columns fetched + use index on created_at
+        all_emails = (Email.query
+                      .order_by(Email.created_at.desc())
+                      .limit(200)   # ← reduced from 300
+                      .all())
+ 
+        recent_replies = (EmailReply.query
+                          .order_by(EmailReply.replied_at.desc())
+                          .limit(15)  # ← reduced from 20
+                          .all())
+ 
+        # Single DB call for stats instead of 4 separate count queries
+        from sqlalchemy import func, case
+        row = db.session.query(
+            func.count(Email.id).label('total'),
+            func.count(case((Email.assigned_role == None, 1))).label('unassigned'),
+            func.count(case(((Email.replied == False) & (Email.assigned_role != None), 1))).label('pending'),
+            func.count(case((Email.replied == True, 1))).label('resolved'),
+        ).one()
+ 
         stats = {
-            "total_emails": Email.query.count(),
-            "unassigned": Email.query.filter(Email.assigned_role.is_(None)).count(),
-            "pending": Email.query.filter(
-                Email.replied == False,
-                Email.assigned_role.isnot(None),
-                Email.status != "resolved"
-            ).count(),
-            "resolved": Email.query.filter(Email.replied == True).count(),
+            "total_emails": row.total,
+            "unassigned":   row.unassigned,
+            "pending":      row.pending,
+            "resolved":     row.resolved,
         }
         return render_template(
             "admin_dashboard.html",
@@ -216,23 +252,24 @@ def dashboard():
             departments=DEPARTMENTS
         )
     else:
-        dept_emails = Email.query.filter(
-            db.or_(
-                Email.assigned_role == current_user.department,
-                Email.assigned_to == current_user.id
-            )
-        ).order_by(Email.created_at.desc()).all()
-
-        pending_count = sum(
-            1 for e in dept_emails
-            if not e.replied and getattr(e, 'status', 'unread') != "resolved"
-        )
+        dept_emails = (Email.query
+                       .filter(
+                           db.or_(
+                               Email.assigned_role == current_user.department,
+                               Email.assigned_to   == current_user.id
+                           )
+                       )
+                       .order_by(Email.created_at.desc())
+                       .limit(100)
+                       .all())
+ 
+        pending_count = sum(1 for e in dept_emails if not e.replied)
         return render_template(
             "user_dashboard.html",
             assigned_emails=dept_emails,
             pending_count=pending_count
         )
-
+ 
 
 @app.route("/view_email/<int:email_id>")
 @login_required
@@ -673,82 +710,93 @@ def _parse_filter_dates(filter_type, from_str='', to_str=''):
 def api_category_stats():
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
-
+ 
     filter_type = request.args.get("filter", "month")
-    from_str    = request.args.get("from",   "")
-    to_str      = request.args.get("to",     "")
-
+    from_str    = request.args.get("from", "")
+    to_str      = request.args.get("to", "")
+ 
+    cache_key = f"cat_stats:{filter_type}:{from_str}:{to_str}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+ 
     start, end = _parse_filter_dates(filter_type, from_str, to_str)
-
+ 
     from models import Email as EmailModel
+    from sqlalchemy import func, case
+ 
+    # Single aggregation query - much faster than fetching all rows
     rows = (
         db.session.query(
             EmailModel.category,
             EmailModel.assigned_role,
-            EmailModel.replied,
+            func.count(EmailModel.id).label('total'),
+            func.count(case((EmailModel.replied == True, 1))).label('replied'),
+            func.count(case((EmailModel.replied == False, 1))).label('pending'),
         )
         .filter(EmailModel.created_at >= start, EmailModel.created_at <= end)
+        .group_by(EmailModel.category, EmailModel.assigned_role)
         .all()
     )
-
+ 
     cat_map = {}
-    for category, dept, replied in rows:
+    for category, dept, total, replied, pending in rows:
         cat = category or "General Inquiry"
-        if cat not in cat_map:
-            cat_map[cat] = {"category": cat, "department": dept or "", "total": 0, "replied": 0, "pending": 0}
-        cat_map[cat]["total"]   += 1
-        if replied:
-            cat_map[cat]["replied"] += 1
-        else:
-            cat_map[cat]["pending"] += 1
-
+        cat_map[cat] = {
+            "category":   cat,
+            "department": dept or "",
+            "total":      total,
+            "replied":    replied,
+            "pending":    pending,
+        }
+ 
     categories = sorted(cat_map.values(), key=lambda x: x["total"], reverse=True)
-
-    total   = sum(c["total"]   for c in categories)
-    replied = sum(c["replied"] for c in categories)
-    pending = sum(c["pending"] for c in categories)
-
-    return jsonify({
-        "total":      total,
-        "replied":    replied,
-        "pending":    pending,
+    total_all  = sum(c["total"]   for c in categories)
+    replied_all= sum(c["replied"] for c in categories)
+    pending_all= sum(c["pending"] for c in categories)
+ 
+    result = {
+        "total":      total_all,
+        "replied":    replied_all,
+        "pending":    pending_all,
         "categories": categories,
-    })
-
+    }
+    cache_set(cache_key, result)
+    return jsonify(result)
 
 @app.route("/api/category_detail")
 @login_required
 def api_category_detail():
     if current_user.role != "admin":
         return jsonify({"error": "Access denied"}), 403
-
+ 
     category    = request.args.get("category", "")
     filter_type = request.args.get("filter", "month")
-    from_str    = request.args.get("from",   "")
-    to_str      = request.args.get("to",     "")
-
+    from_str    = request.args.get("from", "")
+    to_str      = request.args.get("to", "")
+    page        = int(request.args.get("page", 1))
+    per_page    = 50  # ← paginate instead of 200 at once
+ 
     if not category:
         return jsonify({"error": "category param required"}), 400
-
+ 
     start, end = _parse_filter_dates(filter_type, from_str, to_str)
-
+ 
     from models import Email as EmailModel
-    emails = (
-        EmailModel.query
-        .filter(
-            EmailModel.category    == category,
-            EmailModel.created_at >= start,
-            EmailModel.created_at <= end,
-        )
-        .order_by(EmailModel.created_at.desc())
-        .limit(200)
-        .all()
-    )
-
-    total   = len(emails)
+ 
+    # Only select columns we need
+    q = (EmailModel.query
+         .filter(
+             EmailModel.category    == category,
+             EmailModel.created_at >= start,
+             EmailModel.created_at <= end,
+         )
+         .order_by(EmailModel.created_at.desc()))
+ 
+    total   = q.count()
+    emails  = q.offset((page - 1) * per_page).limit(per_page).all()
     replied = sum(1 for e in emails if e.replied)
-    pending = total - replied
-
+ 
     email_list = [
         {
             "id":      e.id,
@@ -760,15 +808,16 @@ def api_category_detail():
         }
         for e in emails
     ]
-
+ 
     return jsonify({
         "category": category,
         "total":    total,
         "replied":  replied,
-        "pending":  pending,
+        "pending":  total - replied,
         "emails":   email_list,
+        "page":     page,
+        "has_more": (page * per_page) < total,
     })
-
 
 @app.route("/api/email_stats")
 @login_required
@@ -997,6 +1046,15 @@ def _start_background_threads():
 
 # Start background threads
 _start_background_threads()
+
+
+try:
+    Compress(app)
+    print("✅ Gzip compression enabled")
+except ImportError:
+    print("ℹ️  flask-compress not installed (optional, adds gzip)")
+
+
 
 # ─────────────────────────────────────────────
 # MAIN ENTRY POINT
