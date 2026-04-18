@@ -4,15 +4,12 @@ Flask-Login==0.6.3
 Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.1
 
-# ===== DATABASE =====
-psycopg2-binary==2.9.9
+# ===== DATABASE (Render-compatible) =====
+# Use psycopg2 (source) instead of psycopg2-binary for Python 3.12+
+psycopg2==2.9.9
 
 # ===== UTILITIES =====
 python-dotenv==1.0.1
 gunicorn==21.2.0
 imaplib2==3.6
 email-validator==2.1.0
-
-# ===== NOTE: torch/transformers REMOVED =====
-# Your ai_engine.py uses keyword matching only - NO ML needed!
-# This saves 4GB+ build time and avoids Python 3.14 conflicts

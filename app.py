@@ -18,6 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 # ===== DATABASE CONFIG - PRODUCTION READY =====
+# ===== DATABASE CONFIG - PRODUCTION READY =====
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL", 
     "postgresql://slci_db_user:gnus7lM6HvwTt2p2Msb5DI9W7YEtQfts@dpg-d6f94dcr85hc738infc0-a.oregon-postgres.render.com:5432/slci_db?sslmode=require"
@@ -25,6 +26,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,      # Auto-reconnect on disconnect
     "pool_recycle": 300,         # Recycle connections every 5 min
+    "connect_args": {
+        "sslmode": "require"     # Force SSL for Render PostgreSQL
+    }
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
