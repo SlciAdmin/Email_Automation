@@ -4,9 +4,9 @@ Flask-Login==0.6.3
 Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.1
 
-# ===== DATABASE (Render-compatible) =====
-# Use psycopg2-binary which has pre-built wheels for ALL Python versions
-psycopg2-binary==2.9.9
+# ===== DATABASE (Python 3.14 Compatible) =====
+# IMPORTANT: Use psycopg2 (source) NOT psycopg2-binary for Python 3.14
+psycopg2==2.9.10
 
 # ===== UTILITIES =====
 python-dotenv==1.0.1
