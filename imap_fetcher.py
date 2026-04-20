@@ -282,14 +282,18 @@ class EmailFetcher:
                         # Message-ID
                         message_id = (msg.get("Message-ID") or "").strip()
 
-                        # Date
+                        # ── DATE PARSING WITH IST CONVERSION ──
                         date_str = msg.get("Date")
                         try:
                             received_date = email.utils.parsedate_to_datetime(date_str)
                             if received_date.tzinfo is None:
                                 received_date = received_date.replace(tzinfo=timezone.utc)
+                            # Convert to IST (UTC+5:30) for storage
+                            ist_timezone = timezone(timedelta(hours=5, minutes=30))
+                            received_date = received_date.astimezone(ist_timezone)
                         except Exception:
-                            received_date = datetime.now(timezone.utc)
+                            received_date = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+                        # ── END DATE PARSING ──
 
                         # Duplicate check BEFORE parsing body/attachments (saves CPU)
                         if self._is_duplicate(sender_addr, subject, message_id, received_date):
@@ -323,7 +327,7 @@ class EmailFetcher:
                             "has_attachments":  has_attachments,
                             "attachments_meta": attachments_meta,
                             "attachments_data": attachments,
-                            "received_date":    received_date,
+                            "received_date":    received_date,  # Now in IST
                         })
                         print(f"  ✓ Queued: {subject[:50]} ← {sender_addr}")
                         if has_attachments:
@@ -420,7 +424,7 @@ def fetch_emails_periodically(app, db, Email, User, ai_engine, mail_engine):
                             category         = category,
                             assigned_role    = department,
                             status           = "unread",
-                            created_at       = received_date,
+                            created_at       = received_date,  # Stored in IST
                             message_id       = message_id,
                             has_attachments  = ed.get("has_attachments", False),
                             attachments_info = json.dumps(ed.get("attachments_meta", [])),

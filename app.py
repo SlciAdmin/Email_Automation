@@ -98,8 +98,21 @@ def load_user(user_id):
 @app.context_processor
 def inject_globals():
     """Inject common variables into all templates"""
-    return {"now": datetime.now(timezone.utc), "timedelta": timedelta}
-
+    from datetime import timedelta
+    def to_ist(dt):
+        """Convert datetime to IST"""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        ist_timezone = timezone(timedelta(hours=5, minutes=30))
+        return dt.astimezone(ist_timezone)
+    
+    return {
+        "now": datetime.now(timezone.utc), 
+        "timedelta": timedelta,
+        "to_ist": to_ist
+    }
 
 # ─────────────────────────────────────────────
 # HELPER: Make datetime timezone-aware (UTC)
@@ -139,6 +152,18 @@ def _reminder_loop():
         except Exception as e:
             print(f"⚠ Tracker error: {e}")
         time_module.sleep(1800)
+
+
+
+# IST Timezone helper
+def to_ist(dt):
+    """Convert datetime to IST (India Standard Time)"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ist_timezone = timezone(timedelta(hours=5, minutes=30))
+    return dt.astimezone(ist_timezone)
 
 
 # ─────────────────────────────────────────────
