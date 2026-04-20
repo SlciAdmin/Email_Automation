@@ -235,10 +235,7 @@
       <tbody id="emailTableBody">
         {% for email in assigned_emails %}
         <tr class="email-row" data-dept="{{ email.assigned_role or 'unassigned' }}" data-status="{{ 'resolved' if email.replied else 'pending' }}" data-id="{{ email.id }}">
-          <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">
-    {% set ist_time = email.created_at.astimezone(timezone(timedelta(hours=5, minutes=30))) if email.created_at.tzinfo else email.created_at.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30))) %}
-    {{ ist_time.strftime('%m-%d %H:%M') }}
-</td>
+          <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">{{ email.created_at.strftime('%m-%d %H:%M') }}</td>
           <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem" title="{{ email.get_sender_display() }}">{{ email.get_sender_display() }}</td>
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem" title="{{ email.subject }}">{{ email.subject[:45] }}{% if email.subject|length > 45 %}…{% endif %}</td>
           <td>

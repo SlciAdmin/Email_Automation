@@ -32,10 +32,7 @@
             </div>
             <div>
                 <div style="color:var(--muted);font-size:.75rem;margin-bottom:.25rem">RECEIVED</div>
-                <span style="font-size:.88rem;color:var(--muted)">
-    {% set ist_time = email.created_at.astimezone(timezone(timedelta(hours=5, minutes=30))) if email.created_at.tzinfo else email.created_at.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30))) %}
-    {{ ist_time.strftime('%Y-%m-%d %H:%M') }} IST
-</span>
+                <span style="font-size:.88rem;color:var(--muted)">{{ email.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
         </div>
     </div>
@@ -192,9 +189,7 @@
                         <span class="badge badge-{{ rep.department|lower|replace(' ','-') }}" style="margin-left:.5rem">{{ rep.department }}</span>
                         {% endif %}
                     </div>
-                    <span style="color:var(--muted);font-size:.78rem">
-    {{ to_ist(rep.replied_at).strftime('%Y-%m-%d %H:%M:%S') }} IST
-</span>
+                    <span style="color:var(--muted);font-size:.78rem">{{ rep.replied_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
                 </div>
                 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:1rem">
                     <pre style="white-space:pre-wrap;font-family:'DM Sans',sans-serif;font-size:.88rem;line-height:1.6;color:var(--text);word-break:break-word;margin:0">{{ rep.reply_content }}</pre>
